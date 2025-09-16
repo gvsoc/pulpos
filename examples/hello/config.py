@@ -20,15 +20,12 @@
 # Authors: Germain Haugou (germain.haugou@gmail.com)
 #
 
-from gvrun.target import BuildParameter
+import pulpos
 
-def declare(target, container):
+def declare(target):
 
-    crt0 = BuildParameter(container, 'crt0', True, 'Add crt0').value
+    hello = pulpos.new_executable('test', target)
 
-    if crt0:
-        container.add_sources(['kernel/crt0.S'])
-
-    container.add_sources([
-        'kernel/init.c',
-    ])
+    hello.add_cflags('-Os -g')
+    hello.add_ldflags('-Os -g')
+    hello.add_sources('test.c')

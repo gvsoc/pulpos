@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2025 Germain Haugou
+# Copyright (C) 2025 2025 GreenWaves Technologies, ETH Zurich and University of Bologna
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -842,6 +842,9 @@ def new_executable(name: str, target: gvrun.target.SystemTreeNode):
     if target_name is None:
         raise RuntimeError('Could not load Pulpos target config, the target has no target name')
 
-    module = importlib.import_module('pulpos.' + target_name)
+    try:
+        module = importlib.import_module('pulpos.' + target_name)
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(f'The target has no pulpos descriptor (target_name: {target_name}, missing module: pulpos.{target_name}.py)') from exc
 
     return module.new_executable(name, target)
