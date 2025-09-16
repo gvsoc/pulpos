@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 GreenWaves Technologies, ETH Zurich and University of Bologna
+* Copyright (C) 2025 ETH Zurich and University of Bologna
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,10 @@
  * limitations under the License.
  */
 
-#pragma once
+#include <stdio.h>
 
-#include <stdint.h>
-
-#if defined(__RV32__)
-typedef uint32_t uint_t;
-#elif defined(__RV64__)
-typedef uint64_t uint_t;
-#else
-#error "Unknown processor width, define either __RV32__ or __RV64__"
-#endif
+int main()
+{
+    printf("Hello\n");
+    return 0;
+}

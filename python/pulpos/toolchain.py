@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2025 Germain Haugou
+# Copyright (C) 2025 GreenWaves Technologies, ETH Zurich and University of Bologna
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
