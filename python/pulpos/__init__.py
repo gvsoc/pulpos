@@ -28,6 +28,8 @@ import gvrun.target
 import dataclasses
 import rich.tree
 from pulpos.toolchain import Toolchain, _ToolchainCFlags, _ToolchainLdFlags
+from gvrun.builder import Builder
+from gvrun.systree import Executable
 
 # Make sure we look for sources in every directory specified in PULPOS_MODULES
 _modules = os.environ.get('PULPOS_MODULES')
@@ -83,14 +85,14 @@ class _CompileCommand(gvrun.commands.Command):
 
     Attributes
     ----------
-    builder : gvrun.commands.Builder
+    builder : Builder
         Builder where commands should be enqueued.
     toolchain: Toolchain
         Toolchain used for compiling the source code
     flags: _ToolchainCFlags
         List of flags used for compiling the source code
     """
-    def __init__(self, builder: gvrun.commands.Builder, toolchain: Toolchain,
+    def __init__(self, builder: Builder, toolchain: Toolchain,
             flags: _ToolchainCFlags):
         super().__init__(builder)
 
@@ -122,14 +124,14 @@ class _LinkCommand(gvrun.commands.Command):
 
     Attributes
     ----------
-    builder : gvrun.commands.Builder
+    builder : Builder
         Builder where commands should be enqueued.
     toolchain: Toolchain
         Toolchain used for linking the object files
     flags: _ToolchainLdFlags
         List of flags used for linking the object files
     """
-    def __init__(self, builder: gvrun.commands.Builder, toolchain: Toolchain,
+    def __init__(self, builder: Builder, toolchain: Toolchain,
             flags: _ToolchainLdFlags):
         super().__init__(builder)
 
@@ -632,7 +634,7 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
 
         return includes
 
-    def _get_compile_commands(self, builder: gvrun.commands.Builder, builddir: str) \
+    def _get_compile_commands(self, builder: Builder, builddir: str) \
             -> list[_CompileCommand]:
         """Returns the compile commands
 
@@ -689,7 +691,7 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
 
         return commands
 
-    def _compile(self, builder: gvrun.commands.Builder, builddir: str):
+    def _compile(self, builder: Builder, builddir: str):
         """Compile step for this container
 
         Generates associated template files
@@ -735,7 +737,7 @@ class PulposModule(_SourceContainer):
         return self._get_title_from_type('Module', full_path)
 
 
-class PulposExecutable(_SourceContainer, gvrun.target.Executable):
+class PulposExecutable(_SourceContainer, Executable):
     """
     Container for Pulpos-based executable
 
@@ -793,7 +795,7 @@ class PulposExecutable(_SourceContainer, gvrun.target.Executable):
         """
         return self._get_title_from_type('Executable', full_path)
 
-    def _compile(self, builder: gvrun.commands.Builder, builddir: str):
+    def _compile(self, builder: Builder, builddir: str):
         """Compile the executable
         """
         toolchain = self._get_toolchain()
