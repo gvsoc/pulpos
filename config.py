@@ -71,5 +71,14 @@ def declare_flags(target, container):
     ])
 
     container.add_ldflags([
-        '-lgcc', '-Wl,--gc-sections', '-fno-eliminate-unused-debug-symbols', '-nostartfiles', '-nostdlib'
+       '-Wl,--gc-sections', '-fno-eliminate-unused-debug-symbols', '-nostdlib'
     ])
+
+    if container._get_toolchain().get_family() not in ['llvm']:
+        container.add_ldflags([
+            '-lgcc', '-nostartfiles'
+        ])
+    else:
+        container.add_ldflags([
+            '-mno-relax'
+        ])

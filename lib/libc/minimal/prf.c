@@ -13,7 +13,7 @@
 #include <string.h>
 #include "ctype.h"
 #include <limits.h>
-#include <sys/types.h>
+#include <stdio.h>
 
 #ifndef EOF
 #define EOF  -1
@@ -434,7 +434,7 @@ static int _atoi(const char **sptr)
 	return i;
 }
 
-int __pi_libc_prf_safe(int (*func)(), void *dest, const char *format, va_list vargs)
+int __pi_libc_prf_safe(int (*func)(int c, FILE *stream), void *dest, const char *format, va_list vargs)
 {
 	/*
 	 * The work buffer has to accommodate for the largest data length.
@@ -564,7 +564,7 @@ int __pi_libc_prf_safe(int (*func)(), void *dest, const char *format, va_list va
 					break;
 #endif
 				case 'z':
-					val = va_arg(vargs, ssize_t);
+					val = va_arg(vargs, size_t);
 					break;
 				case 'h':
 				case 'H':
@@ -628,7 +628,7 @@ int __pi_libc_prf_safe(int (*func)(), void *dest, const char *format, va_list va
 					break;
 #endif
 				case 'z':
-					*va_arg(vargs, ssize_t *) = count;
+					*va_arg(vargs, size_t *) = count;
 					break;
 				default:
 					*va_arg(vargs, int *) = count;

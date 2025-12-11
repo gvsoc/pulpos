@@ -99,8 +99,12 @@ class Toolchain:
     config (config: ToolchainConfig): Toolchain configuration where the behavior of the toolchain
         can be specified.
     """
-    def __init__(self, config: ToolchainConfig):
+    def __init__(self, config: ToolchainConfig, family: str):
         self.config = config
+        self.family = family
+
+    def get_family(self) -> str:
+        return self.family
 
     @abc.abstractmethod
     def _get_compile_command(self, flags: _ToolchainCFlags) -> str:
@@ -195,14 +199,17 @@ class _LlvmToolchain(Toolchain):
     """
     Parent toolchain class for LLVM toolchains
     """
-    pass
+    def __init__(self, config: ToolchainConfig):
+        super().__init__(config, family='llvm')
 
 
 class _GccToolchain(Toolchain):
     """
     Parent toolchain class for LLVM toolchains
     """
-    pass
+    def __init__(self, config: ToolchainConfig):
+        super().__init__(config, family='gcc')
+
 
 
 class RiscvLlvmToolchain(_LlvmToolchain):

@@ -18,7 +18,6 @@
 // Authors: Germain Haugou (germain.haugou@gmail.com)
 //
 
-    .section .text_static
     .global _start
     .type   _start, @function
 _start:
