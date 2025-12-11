@@ -10,13 +10,13 @@
 #include <stdio.h>
 #include <stddef.h>
 
-extern int __pi_libc_prf(int (*func)(), void *dest,
-                const char *format, va_list vargs);
-
 struct emitter {
     char *ptr;
     int len;
 };
+
+extern int __pi_libc_prf(int (*func)(int,struct emitter *), void *dest,
+                const char *format, va_list vargs);
 
 static int sprintf_out(int c, struct emitter *p)
 {

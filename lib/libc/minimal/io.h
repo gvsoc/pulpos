@@ -26,7 +26,7 @@
 int __pi_libc_fputc_safe(int c, FILE *stream);
 
 // Unsafe printf. Needs to be protected against multi-core race conditions by the caller
-int __pi_libc_prf(int (*func)(), void *dest, const char *format, va_list vargs);
+int __pi_libc_prf(int (*func)(int,FILE *), void *dest, const char *format, va_list vargs);
 
 // printf to stdout in a safe multi-core way
-int __pi_libc_prf_safe(int (*func)(), void *dest, const char *format, va_list vargs);
+int __pi_libc_prf_safe(int (*func)(int,FILE *), void *dest, const char *format, va_list vargs);

@@ -89,7 +89,7 @@ int putchar(int c)
 
 
 
-int __pi_libc_prf(int (*func)(), void *dest, const char *format, va_list vargs)
+int __pi_libc_prf(int (*func)(int,FILE *), void *dest, const char *format, va_list vargs)
 {
     return __pi_libc_prf_safe(func, dest, format, vargs);
 }
