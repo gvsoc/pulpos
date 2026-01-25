@@ -18,17 +18,16 @@
 # Authors: Germain Haugou (germain.haugou@gmail.com)
 #
 
-import os
-import pulpos
-from typing import cast
-import gvrun.target
-from gvrun.target import BuildParameter
+from pulpos import PulposModule, SourceContainer, PulposExecutable, get_home
+from typing import cast, Any
+from gvrun.systree import SystemTreeNode
+from gvrun.parameter import BuildParameter
 from pulpos.toolchain import RiscvGccToolchain, ToolchainConfig
 from pulp.chips.pulp_open.pulp_open import PulpOpenAttr
 
-class PulpOpenPulposModule(pulpos.PulposModule):
+class PulpOpenPulposModule(PulposModule):
 
-    def __init__(self, target: gvrun.target.SystemTreeNode, container: pulpos._SourceContainer):
+    def __init__(self, target: SystemTreeNode, container: SourceContainer):
         super().__init__(target, parent=container)
 
         self.add_define('CONFIG_CHIP_NAME', 'pulp_open')
@@ -37,7 +36,7 @@ class PulpOpenPulposModule(pulpos.PulposModule):
 
         attr = cast(PulpOpenAttr, target.get_attributes())
 
-        BuildParameter(self, 'linker_script',  "link.ld", 'Linker script')
+        _ = BuildParameter(self, 'linker_script',  "link.ld", 'Linker script')
 
         if self.get_parameter('linker_script'):
             linker_script_template = f'chips/pulp_open/{self.get_parameter("linker_script")}'
@@ -51,7 +50,7 @@ class PulpOpenPulposModule(pulpos.PulposModule):
                 f'-T{linker_script.get_path()}'
             ])
 
-        path = pulpos.get_home(self)
+        path: str = get_home(self)
 
         self.add_define('__RV32__', '1')
 
@@ -68,19 +67,21 @@ class PulpOpenPulposModule(pulpos.PulposModule):
 
 
 
-class PulpOpenPulposExecutable(pulpos.PulposExecutable):
+class PulpOpenPulposExecutable(PulposExecutable):
 
-    def __init__(self, name, target):
-        super().__init__(name, target)
+    def __init__(self, name: str, target: SystemTreeNode,
+            parameters:list[tuple[str,Any]] | None=None):
+        super().__init__(name, target, parameters=parameters)
 
-        toolchain = BuildParameter(self, 'toolchain',  "gcc", 'Toolchain to be used for compiling and linking').value
+        toolchain: str = BuildParameter(self, 'toolchain',  "gcc", 'Toolchain to be used for compiling and linking').value
 
         if toolchain == 'gcc':
             config = ToolchainConfig(path_from_env='PULP_OPEN_GCC_TOOLCHAIN')
             self.set_toolchain(RiscvGccToolchain(config))
 
-        self.pulpos = PulpOpenPulposModule(target, container=self)
+        self.pulpos: PulpOpenPulposModule = PulpOpenPulposModule(target, container=self)
 
 
-def new_executable(name, target):
-    return PulpOpenPulposExecutable(name, target)
+def new_executable(name: str, target: SystemTreeNode,
+        parameters:list[tuple[str,Any]] | None=None):
+    return PulpOpenPulposExecutable(name, target, parameters=parameters)

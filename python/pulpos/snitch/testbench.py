@@ -23,12 +23,13 @@ import pulpos
 from typing import cast
 import gvrun.target
 import snitch_testbench
+from typing import Any, List, Tuple
 from gvrun.target import BuildParameter
 from pulpos.toolchain import RiscvGccToolchain, RiscvLlvmToolchain, ToolchainConfig
 
 class SnitchTestbenchPulposModule(pulpos.PulposModule):
 
-    def __init__(self, target: gvrun.target.SystemTreeNode, container: pulpos._SourceContainer):
+    def __init__(self, target: gvrun.target.SystemTreeNode, container: pulpos.SourceContainer):
         super().__init__(target, parent=container)
 
         self.add_define('CONFIG_CHIP_NAME', 'snitch/testbench')
@@ -70,8 +71,9 @@ class SnitchTestbenchPulposModule(pulpos.PulposModule):
 
 class SnitchTestbenchPulposExecutable(pulpos.PulposExecutable):
 
-    def __init__(self, name, target):
-        super().__init__(name, target)
+    def __init__(self, name, target,
+            parameters:List[Tuple[str,Any]] | None=None):
+        super().__init__(name, target, parameters=parameters)
 
         toolchain = BuildParameter(self, 'toolchain',  "gcc", 'Toolchain to be used for compiling and linking').value
 
@@ -85,5 +87,6 @@ class SnitchTestbenchPulposExecutable(pulpos.PulposExecutable):
         self.pulpos = SnitchTestbenchPulposModule(target, container=self)
 
 
-def new_executable(name, target):
-    return SnitchTestbenchPulposExecutable(name, target)
+def new_executable(name, target,
+        parameters:List[Tuple[str,Any]] | None=None):
+    return SnitchTestbenchPulposExecutable(name, target, parameters=parameters)

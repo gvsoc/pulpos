@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2025 2025 GreenWaves Technologies, ETH Zurich and University of Bologna
+# Copyright (C) 2025 GreenWaves Technologies, ETH Zurich and University of Bologna
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,13 +23,17 @@ import sys
 import importlib.util
 import logging
 import collections
+from types import ModuleType
+from typing import Any, List, Tuple, Protocol, override
 import gvrun.commands
 import gvrun.target
 import dataclasses
 import rich.tree
+from gvrun.parameter import set_parameters_from_node
 from pulpos.toolchain import Toolchain, _ToolchainCFlags, _ToolchainLdFlags
 from gvrun.builder import Builder
-from gvrun.systree import Executable
+from gvrun.systree import Executable, SystemTreeNode
+from collections import deque
 
 # Make sure we look for sources in every directory specified in PULPOS_MODULES
 _modules = os.environ.get('PULPOS_MODULES')
@@ -37,7 +41,7 @@ if _modules is not None:
     pulpos_source_paths = _modules.split(':')
 
 
-def get_home(container):
+def get_home(container: SourceContainer) -> str:
     """Returns pulpos home folder
 
     This is taken from PULPOS_HOME envvar. Raises an error if it is not defined.
@@ -170,7 +174,7 @@ class _Define:
         the container of the define.
     """
     name: str
-    value: str | None = None
+    value: str | int | None = None
     internal: bool = False
     external: bool = False
 
@@ -207,14 +211,14 @@ class TemplateFile():
     path (str): The path of the generated file
     template (str): The path of the template file
     """
-    def __init__(self, name: str, parent: "_SourceContainer", path: str, template: str):
+    def __init__(self, name: str, parent: "SourceContainer", path: str, template: str):
         self.path = path
         self.parent = parent
         self.template = template
-        self.parameters = {}
+        self.parameters: dict[str, bool | int | str] = {}
         parent._add_template_file(name, self)
 
-    def add_parameter(self, name, value):
+    def add_parameter(self, name: str, value: bool | int | str):
         """Add a parameter.
 
         Any string in the template file of the form @name@ will be replaced by the specified value.
@@ -223,7 +227,7 @@ class TemplateFile():
         ----------
         name (str): Name of the property. Any string of the form @name@ in the template will be
             replaced by the value
-        value (str): Value to be put in the generated file instead of the property.
+        value (Any): Value to be put in the generated file instead of the property.
         """
         self.parameters[name] = value
 
@@ -259,7 +263,71 @@ class TemplateFile():
             with open(self.path, 'w') as file:
                 file.write(content)
 
-class _SourceContainer(gvrun.target.SystemTreeNode):
+class TargetGenModule(Protocol):
+    """Protocol for modules that can generate target-specific files.
+
+    This protocol defines the interface for modules that implement target generation.
+    Modules implementing this protocol should provide a target_gen method that is called
+    during the build process to generate any target-specific configuration or source files.
+    """
+
+    def target_gen(self, container: SourceContainer) -> None: ...
+    """Generate target-specific files for the given source container.
+    """
+
+    def declare(self, target: SystemTreeNode, container: SourceContainer) -> None: ...
+    """Declare all the content to the source container.
+    """
+
+class _ModuleImportNode:
+    """
+    Container for imported module
+
+    This class is used to build a tree of all the imported modules of the build process.
+    This can then be used to go through them, for example for target_gen command.
+
+    Attributes
+    ----------
+    module (_ModuleImportNode | None): Path of the imported module
+    """
+    def __init__(self, module: TargetGenModule | None=None):
+        self.module:TargetGenModule | None = module
+        self.subdirs: dict[str, _ModuleImportNode] = {}
+
+    def add_node(self, path: str, module: _ModuleImportNode):
+        """Add a child node
+
+        This should be called by a new config file is imported from the current module.
+
+        Parameters
+        ----------
+        path (str): Path of the imported module
+        module (_ModuleImportNode): Node representing the imported module
+        """
+        self.subdirs[path] = module
+
+    def target_gen(self, container: SourceContainer, builddir: str):
+        """Generate target-specific files for this module and all subdirectories.
+
+        This method recursively traverses the module import tree and calls the target_gen
+        method on each imported module that implements it. This allows each module in the
+        build hierarchy to generate any target-specific configuration or source files needed
+        for the build process.
+
+        Parameters
+        ----------
+        container : SourceContainer
+            The source container for which to generate target-specific files.
+        builddir : str
+            The build directory path where generated files should be placed.
+        """
+        if self.module is not None and hasattr(self.module, 'target_gen'):
+            self.module.target_gen(container)
+
+        for subdir in self.subdirs.values():
+            subdir.target_gen(container, builddir)
+
+class SourceContainer(SystemTreeNode):
     """
     Container for sources
 
@@ -270,15 +338,25 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
     ----------
     name (str): Name of the container. This name will contribute to the path of the container within
         the system tree.
-    target (gvrun.target.SystemTreeNode | None): Target this container is attached to. The target can be
+    target (SystemTreeNode | None): Target this container is attached to. The target can be
         used to query information about the target.
-    parent (gvrun.target.SystemTreeNode | None): Parent of this container within the system tree. The
+    parent (SystemTreeNode | None): Parent of this container within the system tree. The
         parent can be either another source container or an architectural component.
     """
 
-    def __init__(self, name: str, target: gvrun.target.SystemTreeNode | None=None,
-            parent: gvrun.target.SystemTreeNode | None=None):
+    def __init__(self, name: str, target: SystemTreeNode | None=None,
+            parent: SystemTreeNode | None=None,
+            parameters:List[Tuple[str,Any]] | None=None):
         super().__init__(name, parent=parent)
+
+        # Nodes parameters must be registered with global path so that any parameter declared
+        # with same global name has it value overwritten by the node parameter
+        if parameters is not None:
+            node_parameters = []
+            for parameter in parameters:
+                node_parameters.append((self.get_path(parameter[0]), parameter[1]))
+            set_parameters_from_node(node_parameters)
+
         self.__sources = []
         self.__source_paths = []
         self.__cflags = []
@@ -288,8 +366,14 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
         self.__includes = []
         self.__template_files = {}
         # Stack of included config path, used to determine absolute path of the config files
-        self.__path_stack = collections.deque()
+        self.__path_stack: deque[str] = collections.deque()
         self.__toolchain = None
+        self.__optim_level = None
+        self.__current_dir = os.getcwd()
+        self.__subdirs_tree_stack: deque[_ModuleImportNode] = collections.deque()
+        self.__subdirs_top = _ModuleImportNode()
+        self.__subdirs_tree_stack.append(self.__subdirs_top)
+
 
     def set_toolchain(self, toolchain: Toolchain):
         """Set the toolchain.
@@ -324,7 +408,7 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
             template)
         return propfile
 
-    def add_define(self, name: str, value: str, internal: bool=True, external: bool=True):
+    def add_define(self, name: str, value: str | int, internal: bool=True, external: bool=True):
         """Add a define.
 
         The define is attached to the container.
@@ -334,7 +418,7 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
         Parameters
         ----------
         name (str): The name of the define.
-        value (str | None): The value of the define. Can be None in case it has no value.
+        value (str | int | None): The value of the define. Can be None in case it has no value.
         internal (bool): True if the define should be used when compiling the sources of the
             container of the define.
         external (bool): True if the define should be used when compiling sources of a container
@@ -363,6 +447,18 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
                 self.__includes.append(_Include(include, internal, external))
         else:
             self.__includes.append(_Include(includes, internal, external))
+
+    def set_optimization_level(self, level: str):
+        """Set optimization level.
+
+        The optimization level will be applied for this container and any child container which
+        does not have any optimization level
+
+        Parameters
+        ----------
+        level (str): The optimization level, e.g. -O3. It will be passed as it is to the compiler.
+        """
+        self.__optim_level = level
 
     def add_cflags(self, cflags: list[str] | str):
         """Add CFLAGS.
@@ -442,7 +538,7 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
         else:
             self.__sources.append(sources)
 
-    def add_subdirectory(self, path: str, target: gvrun.target.SystemTreeNode):
+    def add_subdirectory(self, path: str, target: SystemTreeNode):
         """Add a subdirectory.
 
         The config file from the specified subdirectory is imported and its declare method
@@ -452,7 +548,7 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
         Parameters
         ----------
         path (str): The path of the folder containing the config file to be imported.
-        target (gvrun.target.SystemTreeNode): The target to be passed to the imported config.
+        target (SystemTreeNode): The target to be passed to the imported config.
         """
         logging.debug(f'{self._get_title(True)} Importing config (name: {path})')
 
@@ -467,6 +563,8 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
 
         file = os.path.join(path, 'config.py')
 
+        module: TargetGenModule
+
         try:
             spec = importlib.util.spec_from_file_location(file, file)
             if spec is None or spec.loader is None:
@@ -479,9 +577,24 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
             raise RuntimeError(f'Unable to open test configuration file: {file}') from _exc
 
         self.__path_stack.append(path)
-        module.declare(target, self)
-        self.__path_stack.pop()
 
+        # Register the imported module in the tree to be able to go through the modules later
+        new_node = _ModuleImportNode(module)
+        self.__subdirs_tree_stack[-1].add_node(path, new_node)
+        self.__subdirs_tree_stack.append(new_node)
+        self.__current_dir = path
+
+        module.declare(target, self)
+
+        _ = self.__subdirs_tree_stack.pop()
+
+        _ = self.__path_stack.pop()
+
+    @override
+    def target_gen(self, builddir:str):
+        """ Overrides the systree target_gen to propagate to imported modules
+        """
+        self.__subdirs_top.target_gen(self, builddir)
 
     def _get_title_from_type(self, type_name: str, full_path=False) -> str:
         """ Returns title for logging for specified type
@@ -527,7 +640,7 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
             return self.__toolchain
 
         parent = self._get_parent()
-        if parent is not None and isinstance(parent, _SourceContainer):
+        if parent is not None and isinstance(parent, SourceContainer):
             return parent._get_toolchain()
 
         return None
@@ -546,6 +659,7 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
         for child in self._get_childs():
             ldflags += child._get_ldflags()
         ldflags += self.__ldflags
+
         return ldflags
 
     def _get_cflags(self) -> list[str]:
@@ -557,7 +671,24 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
         for child in self._get_childs():
             cflags += child._get_cflags()
         cflags += self.__cflags
+
         return cflags
+
+    def _get_optimization_level(self) -> str | None:
+        """Return the optimization level for this container
+
+        If this container does not have any optimization level, it will return the one from the
+        parent.
+        """
+        if self.__optim_level is not None:
+            return self.__optim_level
+
+        parent: SystemTreeNode | None = self._get_parent()
+        if parent is not None and isinstance(parent, SourceContainer):
+            return parent._get_optimization_level()
+
+        return None
+
 
     def _get_source_paths(self) -> list[str]:
         """Return the list of source include paths
@@ -567,7 +698,7 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
         paths = []
 
         parent = self._get_parent()
-        if parent is not None and isinstance(parent, _SourceContainer):
+        if parent is not None and isinstance(parent, SourceContainer):
             paths += parent._get_source_paths()
 
         paths += self.__source_paths
@@ -676,11 +807,17 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
 
                 if src_timestamp >= obj_timestamp:
 
+                    cflags = self._get_cflags()
+
+                    optim_level = self._get_optimization_level()
+                    if optim_level is not None:
+                        cflags.append(optim_level)
+
                     flags = _ToolchainCFlags(
                         builddir=builddir,
                         source_name=source,
                         source_path=source_path,
-                        cflags=self._get_cflags(),
+                        cflags=cflags,
                         includes=self._get_includes(internal=True),
                         defines=self._get_defines(internal=True)
                     )
@@ -700,7 +837,7 @@ class _SourceContainer(gvrun.target.SystemTreeNode):
             propfile._gen()
 
 
-class PulposModule(_SourceContainer):
+class PulposModule(SourceContainer):
     """
     Container for Pulpos module
 
@@ -711,11 +848,11 @@ class PulposModule(_SourceContainer):
     ----------
     target (gvrun.target.Target): Target this container is attached to. The target can be
         used to query information about the target.
-    parent (_SourceContainer): Parent of this container within the system tree. The
+    parent (SourceContainer): Parent of this container within the system tree. The
         parent must be another source container.
     """
 
-    def __init__(self, target: gvrun.target.SystemTreeNode, parent: _SourceContainer):
+    def __init__(self, target: SystemTreeNode, parent: SourceContainer):
         super().__init__('pulpos', target, parent=parent)
 
 
@@ -737,7 +874,7 @@ class PulposModule(_SourceContainer):
         return self._get_title_from_type('Module', full_path)
 
 
-class PulposExecutable(_SourceContainer, Executable):
+class PulposExecutable(SourceContainer, Executable):
     """
     Container for Pulpos-based executable
 
@@ -748,14 +885,15 @@ class PulposExecutable(_SourceContainer, Executable):
     Attributes
     ----------
     name (str): Name of the executable
-    target (gvrun.target.SystemTreeNode): Target this container is attached to. The target can be
+    target (SystemTreeNode): Target this container is attached to. The target can be
         used to query information about the target.
-    parent (_SourceContainer): Parent of this container within the system tree. The
+    parent (SourceContainer): Parent of this container within the system tree. The
         parent must be another source container.
     """
 
-    def __init__(self, name: str, target: gvrun.target.SystemTreeNode):
-        super().__init__(name, target=target, parent=target)
+    def __init__(self, name: str, target: SystemTreeNode,
+            parameters:List[Tuple[str,Any]] | None=None):
+        super().__init__(name, target=target, parent=target, parameters=parameters)
         self.__target = target
         builddir = self.get_parameter('/builddir')
         if builddir is None:
@@ -812,11 +950,18 @@ class PulposExecutable(_SourceContainer, Executable):
         do_link = len(commands) != 0 or not os.path.exists(self.__binary)
 
         if do_link:
+
+            ldflags = self._get_ldflags()
+
+            optim_level = self._get_optimization_level()
+            if optim_level is not None:
+                ldflags.append(optim_level)
+
             flags = _ToolchainLdFlags(
                 builddir=self.__builddir,
                 binary=self.__binary,
                 sources=self._get_sources(),
-                ldflags=self._get_ldflags(),
+                ldflags=ldflags,
                 includes=self._get_lib_includes()
             )
 
@@ -830,7 +975,8 @@ class PulposExecutable(_SourceContainer, Executable):
                 builder.push_command(link_command)
 
 
-def new_executable(name: str, target: gvrun.target.SystemTreeNode):
+def new_executable(name: str, target: SystemTreeNode,
+        parameters:List[Tuple[str,Any]] | None=None):
     """Create a new executable
 
     This will create a new executable for the specified target.
@@ -838,7 +984,10 @@ def new_executable(name: str, target: gvrun.target.SystemTreeNode):
     Parameters
     ----------
     name (str): Name of the executable.
-    target (gvrun.target.SystemTreeNode): Target for which this executable will be compiled.
+    target (SystemTreeNode): Target for which this executable will be compiled.
+    parameters (List[Tuple[str,Any]] | None): List of parameters for this executable. They will
+    be applied as command-line parameters, but their name should be relative to this
+    executable without the executable name.
     """
     target_name = target.get_target_name()
     if target_name is None:
@@ -849,4 +998,4 @@ def new_executable(name: str, target: gvrun.target.SystemTreeNode):
     except ModuleNotFoundError as exc:
         raise RuntimeError(f'The target has no pulpos descriptor (target_name: {target_name}, missing module: pulpos.{target_name}.py)') from exc
 
-    return module.new_executable(name, target)
+    return module.new_executable(name, target, parameters=parameters)

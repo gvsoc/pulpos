@@ -66,6 +66,9 @@ def declare_flags(target, container):
 
     container.add_define(f'__PLATFORM_{platform.upper()}__', '1')
 
+    if platform == 'gvsoc':
+        container.add_includes(f'{os.environ.get("GVSOC_HOME")}/include/target')
+
     container.add_cflags([
         '-fdata-sections', '-ffunction-sections', '-fno-jump-tables'
     ])
