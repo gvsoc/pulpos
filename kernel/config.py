@@ -29,6 +29,8 @@ def declare(target, container):
     if crt0:
         container.add_sources(['kernel/crt0.S'])
 
+    container.add_cflags('-fno-tree-loop-distribute-patterns')
+
     container.add_sources([
         'kernel/init.c',
     ])
