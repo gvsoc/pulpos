@@ -18,9 +18,16 @@
 # Authors: Germain Haugou (germain.haugou@gmail.com)
 #
 
+<<<<<<< Updated upstream
 from pulpos import PulposModule, SourceContainer, PulposExecutable, get_home
 from typing import cast, Any
 from gvrun.systree import SystemTreeNode
+=======
+import os
+import pulpos
+from typing import cast
+import gvrun.target
+>>>>>>> Stashed changes
 from gvrun.parameter import BuildParameter
 from pulpos.toolchain import RiscvGccToolchain, ToolchainConfig
 from pulp.chips.pulp_open.pulp_open import PulpOpenAttr

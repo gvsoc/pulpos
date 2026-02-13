@@ -898,7 +898,10 @@ class PulposExecutable(SourceContainer, Executable):
         builddir = self.get_parameter('/builddir')
         if builddir is None:
             builddir = os.getcwd()
-        self.__builddir = os.path.join(builddir, self.get_path())
+        path = self.get_path()
+        if path[0] == '/':
+            path = path[1:]
+        self.__builddir = os.path.join(builddir, path)
         self.__binary = os.path.join(self.__builddir, name)
 
         target._add_executable(self)

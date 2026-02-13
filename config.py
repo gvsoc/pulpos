@@ -21,7 +21,7 @@
 #
 
 import os
-from gvrun.target import BuildParameter
+from gvrun.parameter import BuildParameter
 
 
 def declare(target, container):

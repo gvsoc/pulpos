@@ -22,9 +22,14 @@ import os
 import pulpos
 from typing import cast
 import gvrun.target
+<<<<<<< Updated upstream
 import snitch_testbench
 from typing import Any, List, Tuple
 from gvrun.target import BuildParameter
+=======
+from snitch_testbench import SnitchTestbenchBoardConfig
+from gvrun.parameter import BuildParameter
+>>>>>>> Stashed changes
 from pulpos.toolchain import RiscvGccToolchain, RiscvLlvmToolchain, ToolchainConfig
 
 class SnitchTestbenchPulposModule(pulpos.PulposModule):
@@ -36,7 +41,7 @@ class SnitchTestbenchPulposModule(pulpos.PulposModule):
         self.add_define('CONFIG_CHIP_FAMILY_NAME', 'snitch/testbench')
         self.add_define('CONFIG_CHIP_SNITCH_TESTBENCH', '1')
 
-        attr = cast(snitch_testbench.SnitchTestbenchAttr, target.get_attributes())
+        attr = cast(SnitchTestbenchBoardConfig, target.get_attributes())
 
         BuildParameter(self, 'linker_script',  "link.ld", 'Linker script')
 
@@ -45,8 +50,8 @@ class SnitchTestbenchPulposModule(pulpos.PulposModule):
 
             linker_script = self.new_template_file('linker_script', 'link.ld', linker_script_template)
 
-            linker_script.add_parameter('mem_start', attr.mem_l0.base)
-            linker_script.add_parameter('mem_size', attr.mem_l0.size)
+            linker_script.add_parameter('mem_start', attr.soc.mem_l0_mapping.base)
+            linker_script.add_parameter('mem_size', attr.soc.mem_l0_mapping.size)
 
             self.add_ldflags([
                 f'-T{linker_script.get_path()}'

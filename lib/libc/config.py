@@ -20,7 +20,7 @@
 # Authors: Germain Haugou (germain.haugou@gmail.com)
 #
 
-from gvrun.target import BuildParameter
+from gvrun.parameter import BuildParameter
 
 def declare(target, container):
 
