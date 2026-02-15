@@ -22,14 +22,10 @@ import os
 import pulpos
 from typing import cast
 import gvrun.target
-<<<<<<< Updated upstream
 import snitch_testbench
 from typing import Any, List, Tuple
-from gvrun.target import BuildParameter
-=======
 from snitch_testbench import SnitchTestbenchBoardConfig
 from gvrun.parameter import BuildParameter
->>>>>>> Stashed changes
 from pulpos.toolchain import RiscvGccToolchain, RiscvLlvmToolchain, ToolchainConfig
 
 class SnitchTestbenchPulposModule(pulpos.PulposModule):
