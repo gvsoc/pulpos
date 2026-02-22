@@ -1,22 +1,8 @@
+# SPDX-FileCopyrightText: 2026 ETH Zurich, University of Bologna and EssilorLuxottica SAS
 #
-# Copyright (C) 2025 GreenWaves Technologies, ETH Zurich and University of Bologna
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
+# SPDX-License-Identifier: Apache-2.0
 #
 # Authors: Germain Haugou (germain.haugou@gmail.com)
-#
 
 import abc
 import os.path
@@ -41,7 +27,7 @@ class ToolchainConfig:
     path_from_env: str = ''
 
 @dataclass
-class _ToolchainCFlags:
+class ToolchainCFlags:
     """
     Toolchain CFLAGS
 
@@ -65,7 +51,7 @@ class _ToolchainCFlags:
     defines: list[str] = field(default_factory=list)
 
 @dataclass
-class _ToolchainLdFlags:
+class ToolchainLdFlags:
     """
     Toolchain LDFLAGS
 
@@ -107,7 +93,7 @@ class Toolchain:
         return self.family
 
     @abc.abstractmethod
-    def _get_compile_command(self, flags: _ToolchainCFlags) -> str:
+    def _get_compile_command(self, flags: ToolchainCFlags) -> str:
         """Get the compile command.
         The toolchain will determine the compile command from specified flags.
         This method must be overriden by the implementation class
@@ -115,7 +101,7 @@ class Toolchain:
         pass
 
     @abc.abstractmethod
-    def _get_link_command(self, flags: _ToolchainLdFlags) -> str:
+    def _get_link_command(self, flags: ToolchainLdFlags) -> str:
         """Get the link command.
         The toolchain will determine the link command from specified flags.
         This method must be overriden by the implementation class
@@ -225,14 +211,14 @@ class RiscvLlvmToolchain(_LlvmToolchain):
     def __init__(self, config: ToolchainConfig):
         super().__init__(config)
 
-    def _get_compile_command(self, flags:_ToolchainCFlags) -> str:
+    def _get_compile_command(self, flags:ToolchainCFlags) -> str:
 
         cc = self._get_toolchain_command('clang')
 
         return self._get_compile_command_from_cc(cc, flags)
 
 
-    def _get_link_command(self, flags: _ToolchainLdFlags) -> str:
+    def _get_link_command(self, flags: ToolchainLdFlags) -> str:
 
         ld = self._get_toolchain_command('clang')
 
@@ -253,7 +239,7 @@ class RiscvGccToolchain(_GccToolchain):
     def __init__(self, config: ToolchainConfig):
         super().__init__(config)
 
-    def _get_compile_command(self, flags:_ToolchainCFlags) -> str:
+    def _get_compile_command(self, flags:ToolchainCFlags) -> str:
         """Get the compile command.
         The toolchain will determine the compile command from specified flags.
         """
@@ -261,7 +247,7 @@ class RiscvGccToolchain(_GccToolchain):
 
         return self._get_compile_command_from_cc(cc, flags)
 
-    def _get_link_command(self, flags: _ToolchainLdFlags) -> str:
+    def _get_link_command(self, flags: ToolchainLdFlags) -> str:
         """Get the link command.
         The toolchain will determine the link command from specified flags.
         """
