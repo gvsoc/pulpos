@@ -1,22 +1,8 @@
+# SPDX-FileCopyrightText: 2026 ETH Zurich, University of Bologna and EssilorLuxottica SAS
 #
-# Copyright (C) 2025 GreenWaves Technologies, ETH Zurich and University of Bologna
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
+# SPDX-License-Identifier: Apache-2.0
 #
 # Authors: Germain Haugou (germain.haugou@gmail.com)
-#
 
 from pulpos import PulposModule, SourceContainer, PulposExecutable, get_home
 from typing import cast, Any
@@ -35,7 +21,7 @@ class PulpOpenPulposModule(PulposModule):
         super().__init__(target, parent=container)
 
         self.add_define('CONFIG_CHIP_NAME', 'pulp_open')
-        self.add_define('CONFIG_CHIP_FAMILY_NAME', 'pulp_open')
+        self.add_define('CONFIG_CHIP_FAMILY_NAME', 'pulp')
         self.add_define('CONFIG_CHIP_PULP_OPEN', '1')
 
         attr = cast(PulpOpenAttr, target.get_attributes())
@@ -43,7 +29,7 @@ class PulpOpenPulposModule(PulposModule):
         _ = BuildParameter(self, 'linker_script',  "link.ld", 'Linker script')
 
         if self.get_parameter('linker_script'):
-            linker_script_template = f'chips/pulp_open/{self.get_parameter("linker_script")}'
+            linker_script_template = f'arch/pulp/kernel/{self.get_parameter("linker_script")}'
 
             linker_script = self.new_template_file('linker_script', 'link.ld', linker_script_template)
 
@@ -59,13 +45,22 @@ class PulpOpenPulposModule(PulposModule):
         self.add_define('__RV32__', '1')
 
         self.add_cflags([
-            '-march=rv32imafc'
+            '-march=rv32imcxgap9 -mnohwloop'
         ])
         self.add_ldflags([
-            '-march=rv32imafc'
+            '-march=rv32imcxgap9'
         ])
 
-        self.add_sources(['chips/pulp_open/kernel/hal.c'])
+        self.add_define('CONFIG_ISA_PULPV2', 1)
+
+        self.add_define('CONFIG_IRQ_INC', '<arch/pulp/kernel/irq.h>')
+        self.add_define('CONFIG_MEMORY_INC', '<arch/pulp/kernel/memory.h>')
+
+        self.add_sources([
+            'arch/pulp/kernel/hal.c',
+            'arch/pulp/kernel/irq.c',
+            'arch/pulp/kernel/irq_asm.S',
+        ])
 
         self.add_subdirectory(path, target)
 

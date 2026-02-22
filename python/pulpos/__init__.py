@@ -1,22 +1,8 @@
+# SPDX-FileCopyrightText: 2026 ETH Zurich, University of Bologna and EssilorLuxottica SAS
 #
-# Copyright (C) 2025 GreenWaves Technologies, ETH Zurich and University of Bologna
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
+# SPDX-License-Identifier: Apache-2.0
 #
 # Authors: Germain Haugou (germain.haugou@gmail.com)
-#
 
 import os
 import sys
@@ -30,11 +16,12 @@ try:
 except ImportError:
     from typing_extensions import override  # Python 3.10–3.11
 import gvrun.commands
-import gvrun.target
+from gvrun.systree import SystemTreeNode
+from typing import Any
 import dataclasses
 import rich.tree
 from gvrun.parameter import set_parameters_from_node
-from pulpos.toolchain import Toolchain, _ToolchainCFlags, _ToolchainLdFlags
+from pulpos.toolchain import Toolchain, ToolchainCFlags, ToolchainLdFlags
 from gvrun.builder import Builder
 from gvrun.systree import Executable, SystemTreeNode
 from collections import deque
@@ -57,7 +44,7 @@ def get_home(container: "SourceContainer") -> str:
     """
     home = os.environ.get('PULPOS_HOME')
     if home is None:
-        raise RuntimeError(f'{container._get_title(True)} PULPOS_HOME is nto defined')
+        raise RuntimeError(f'{container._get_title(True)} PULPOS_HOME is not defined')
     return home
 
 
@@ -97,11 +84,11 @@ class _CompileCommand(gvrun.commands.Command):
         Builder where commands should be enqueued.
     toolchain: Toolchain
         Toolchain used for compiling the source code
-    flags: _ToolchainCFlags
+    flags: ToolchainCFlags
         List of flags used for compiling the source code
     """
     def __init__(self, builder: Builder, toolchain: Toolchain,
-            flags: _ToolchainCFlags):
+            flags: ToolchainCFlags):
         super().__init__(builder)
 
         self.flags = flags
@@ -136,11 +123,11 @@ class _LinkCommand(gvrun.commands.Command):
         Builder where commands should be enqueued.
     toolchain: Toolchain
         Toolchain used for linking the object files
-    flags: _ToolchainLdFlags
+    flags: ToolchainLdFlags
         List of flags used for linking the object files
     """
     def __init__(self, builder: Builder, toolchain: Toolchain,
-            flags: _ToolchainLdFlags):
+            flags: ToolchainLdFlags):
         super().__init__(builder)
 
         self.builder = builder
@@ -350,7 +337,7 @@ class SourceContainer(SystemTreeNode):
 
     def __init__(self, name: str, target: SystemTreeNode | None=None,
             parent: SystemTreeNode | None=None,
-            parameters:List[Tuple[str,Any]] | None=None):
+            parameters:list[tuple[str,Any]] | None=None):
         super().__init__(name, parent=parent)
 
         # Nodes parameters must be registered with global path so that any parameter declared
@@ -817,7 +804,7 @@ class SourceContainer(SystemTreeNode):
                     if optim_level is not None:
                         cflags.append(optim_level)
 
-                    flags = _ToolchainCFlags(
+                    flags = ToolchainCFlags(
                         builddir=builddir,
                         source_name=source,
                         source_path=source_path,
@@ -896,7 +883,7 @@ class PulposExecutable(SourceContainer, Executable):
     """
 
     def __init__(self, name: str, target: SystemTreeNode,
-            parameters:List[Tuple[str,Any]] | None=None):
+            parameters:list[tuple[str,Any]] | None=None):
         super().__init__(name, target=target, parent=target, parameters=parameters)
         self.__target = target
         builddir = self.get_parameter('/builddir')
@@ -964,7 +951,7 @@ class PulposExecutable(SourceContainer, Executable):
             if optim_level is not None:
                 ldflags.append(optim_level)
 
-            flags = _ToolchainLdFlags(
+            flags = ToolchainLdFlags(
                 builddir=self.__builddir,
                 binary=self.__binary,
                 sources=self._get_sources(),

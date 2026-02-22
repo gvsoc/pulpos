@@ -1,27 +1,18 @@
-/*
- * Copyright (C) 2023 GreenWaves Technologies, ETH Zurich and University of Bologna
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-
-/*
- * Authors: Germain Haugou (germain.haugou@gmail.com)
- */
+// SPDX-FileCopyrightText: 2026 ETH Zurich, University of Bologna and EssilorLuxottica SAS
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Authors: Germain Haugou (germain.haugou@gmail.com)
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <kernel/init.h>
+#ifdef CONFIG_IRQ
+#include <pmsis/kernel/irq.h>
+#endif
+#ifdef CONFIG_THREAD
+#include <pmsis/kernel/thread.h>
+#endif
 #include <kernel/link.h>
 #include <kernel/hal.h>
 #include <lib/libc/minimal/libc.h>
@@ -92,9 +83,24 @@ void __pi_init_start()
     __pi_libc_init();
 #endif
 
+#ifdef CONFIG_EVENT
+    __pi_evt_sched_init();
+#endif
+
+#ifdef CONFIG_IRQ
+    __pi_irq_init();
+#endif
+
+#ifdef CONFIG_THREAD
+    __pi_thread_sched_init();
+#endif
+
     // Call global and static constructors
     // Each module may do private initializations there
     __pi_init_do_ctors();
+
+    // Soc specific initializations
+    __pi_init_soc();
 
 #ifdef CONFIG_LIBC
     // Now that the system is ready, activate more complex IO like uart

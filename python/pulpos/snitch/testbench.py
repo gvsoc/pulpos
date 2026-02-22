@@ -1,22 +1,8 @@
+# SPDX-FileCopyrightText: 2026 ETH Zurich, University of Bologna and EssilorLuxottica SAS
 #
-# Copyright (C) 2025 GreenWaves Technologies, ETH Zurich and University of Bologna
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
+# SPDX-License-Identifier: Apache-2.0
 #
 # Authors: Germain Haugou (germain.haugou@gmail.com)
-#
 
 import os
 import pulpos
@@ -42,7 +28,7 @@ class SnitchTestbenchPulposModule(pulpos.PulposModule):
         BuildParameter(self, 'linker_script',  "link.ld", 'Linker script')
 
         if self.get_parameter('linker_script'):
-            linker_script_template = f'chips/snitch/testbench/{self.get_parameter("linker_script")}'
+            linker_script_template = f'arch/snitch/testbench/{self.get_parameter("linker_script")}'
 
             linker_script = self.new_template_file('linker_script', 'link.ld', linker_script_template)
 
@@ -64,7 +50,7 @@ class SnitchTestbenchPulposModule(pulpos.PulposModule):
             '-march=rv32imafdc'
         ])
 
-        self.add_sources(['chips/snitch/testbench/kernel/hal.c'])
+        self.add_sources(['arch/snitch/testbench/kernel/hal.c'])
 
         self.add_subdirectory(path, target)
 
@@ -72,9 +58,20 @@ class SnitchTestbenchPulposModule(pulpos.PulposModule):
 
 class SnitchTestbenchPulposExecutable(pulpos.PulposExecutable):
 
-    def __init__(self, name, target,
-            parameters:List[Tuple[str,Any]] | None=None):
-        super().__init__(name, target, parameters=parameters)
+
+    def __init__(self, name: str, target: gvrun.target.SystemTreeNode,
+            parameters: list[tuple[str, Any]] | None=None):
+
+        snitch_parameters: list[tuple[str, Any]] = [
+            ('pulpos/kernel.threading', False),
+            ('pulpos/kernel.event', False),
+        ]
+
+        if parameters is not None:
+            snitch_parameters = snitch_parameters + parameters
+
+        super().__init__(name, target, parameters=snitch_parameters)
+
 
         toolchain = BuildParameter(self, 'toolchain',  "gcc", 'Toolchain to be used for compiling and linking').value
 
