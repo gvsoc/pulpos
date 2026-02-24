@@ -24,7 +24,11 @@ import importlib.util
 import logging
 import collections
 from types import ModuleType
-from typing import Any, List, Tuple, Protocol, override
+from typing import Any, List, Tuple, Protocol
+try:
+    from typing import override  # Python 3.12+
+except ImportError:
+    from typing_extensions import override  # Python 3.10–3.11
 import gvrun.commands
 import gvrun.target
 import dataclasses
@@ -41,7 +45,7 @@ if _modules is not None:
     pulpos_source_paths = _modules.split(':')
 
 
-def get_home(container: SourceContainer) -> str:
+def get_home(container: "SourceContainer") -> str:
     """Returns pulpos home folder
 
     This is taken from PULPOS_HOME envvar. Raises an error if it is not defined.
@@ -271,11 +275,11 @@ class TargetGenModule(Protocol):
     during the build process to generate any target-specific configuration or source files.
     """
 
-    def target_gen(self, container: SourceContainer) -> None: ...
+    def target_gen(self, container: "SourceContainer") -> None: ...
     """Generate target-specific files for the given source container.
     """
 
-    def declare(self, target: SystemTreeNode, container: SourceContainer) -> None: ...
+    def declare(self, target: SystemTreeNode, container: "SourceContainer") -> None: ...
     """Declare all the content to the source container.
     """
 
@@ -292,9 +296,9 @@ class _ModuleImportNode:
     """
     def __init__(self, module: TargetGenModule | None=None):
         self.module:TargetGenModule | None = module
-        self.subdirs: dict[str, _ModuleImportNode] = {}
+        self.subdirs: dict[str, "_ModuleImportNode"] = {}
 
-    def add_node(self, path: str, module: _ModuleImportNode):
+    def add_node(self, path: str, module: "_ModuleImportNode"):
         """Add a child node
 
         This should be called by a new config file is imported from the current module.
@@ -306,7 +310,7 @@ class _ModuleImportNode:
         """
         self.subdirs[path] = module
 
-    def target_gen(self, container: SourceContainer, builddir: str):
+    def target_gen(self, container: "SourceContainer", builddir: str):
         """Generate target-specific files for this module and all subdirectories.
 
         This method recursively traverses the module import tree and calls the target_gen
