@@ -78,23 +78,23 @@ int main()
     printf("Entered example\n");
 
     if (pi_thread_create(&thread0, "thread0", thread0_entry, NULL, 0, stack0,
-            STACK_SIZE, pi_evt_signal(&event0))) return -1;
+            STACK_SIZE, pi_evt_sig_init(&event0))) return -1;
 
     if (pi_thread_create(&thread1, "thread1", thread1_entry, NULL, 0, stack1,
-            STACK_SIZE, pi_evt_signal(&event1))) return -1;
+            STACK_SIZE, pi_evt_sig_init(&event1))) return -1;
 
-    pi_evt_signal(&end_event);
+    pi_evt_sig_init(&end_event);
 
-    pi_evt_notify(pi_evt_task(&task0_event, task0_handler, &thread0));
-    pi_evt_notify(pi_evt_task(&task1_event, task1_handler, &thread1));
+    pi_evt_notify(pi_evt_task_init(&task0_event, task0_handler, &thread0));
+    pi_evt_notify(pi_evt_task_init(&task1_event, task1_handler, &thread1));
 
-    pi_evt_notify_delayed(pi_evt_cb(&delayed_event, delay_handler), PERIOD0);
+    pi_evt_notify_delayed(pi_evt_cb_init(&delayed_event, delay_handler), PERIOD0);
 
-    pi_evt_signal_wait(&end_event);
+    pi_evt_sig_wait(&end_event);
 
     end = 1;
-    pi_evt_signal_wait(&event0);
-    pi_evt_signal_wait(&event1);
+    pi_evt_sig_wait(&event0);
+    pi_evt_sig_wait(&event1);
 
     return 0;
 }

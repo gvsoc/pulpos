@@ -50,12 +50,12 @@ int main()
 
     printf("Entered example\n");
 
-    pi_evt_signal(&end_event);
+    pi_evt_sig_init(&end_event);
 
-    pi_evt_notify_delayed(pi_evt_cb(&event0, delay0_handler), PERIOD0);
-    pi_evt_notify_delayed(pi_evt_cb(&event1, delay1_handler), PERIOD1);
+    pi_evt_notify_delayed(pi_evt_cb_init(&event0, delay0_handler), PERIOD0);
+    pi_evt_notify_delayed(pi_evt_cb_init(&event1, delay1_handler), PERIOD1);
 
-    pi_evt_signal_wait(&end_event);
+    pi_evt_sig_wait(&end_event);
 
     return 0;
 }

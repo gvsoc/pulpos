@@ -25,9 +25,9 @@ __pi_thread_sleep:
 
 
 
-    .global __pi_evt_signal_wait
-    .type   __pi_evt_signal_wait, @function
-__pi_evt_signal_wait:
+    .global __pi_evt_sig_wait
+    .type   __pi_evt_sig_wait, @function
+__pi_evt_sig_wait:
     // Arguments:
     //     a0: event
     //     a1: current thread
@@ -64,12 +64,12 @@ __pi_thread_handle_work_items_no_callbacks:
     // Then tasks. If there is any this will come back to callback handling in case new ones have
     // been added
     lw      t3, PI_THREAD_T_FIRST_TASK(s1)
-    bnez    t3, __pi_evt_signal_wait_handle_tasks
+    bnez    t3, __pi_evt_sig_wait_handle_tasks
 
     // Check if we should exit because event is now done
     // Here we are sure to leave with no work-item pending as we checked them before
     lb      t3, PI_THREAD_T_NOT_WAITING(s1)
-    bnez    t3, __pi_evt_signal_wait_end
+    bnez    t3, __pi_evt_sig_wait_end
 
     // Make sure we won't be scheduled again since we don't have any work-item anymore
     // No need to update __pi_thread_ready since we were not in the queue as we are the current
@@ -78,7 +78,7 @@ __pi_thread_handle_work_items_no_callbacks:
 
     // If there is any thready ready, switch to it instead of going to sleep
     lw      t3, %tiny(__pi_thread_ready)(x0)
-    bnez    t3, __pi_evt_signal_wait_switch_thread
+    bnez    t3, __pi_evt_sig_wait_switch_thread
 
 
 
@@ -109,7 +109,7 @@ __pi_thread_sleep_loop:
 
 
 
-    .size   __pi_evt_signal_wait, . - __pi_evt_signal_wait
+    .size   __pi_evt_sig_wait, . - __pi_evt_sig_wait
 
     .global __pi_thread_sleep_wakeup
     .type   __pi_thread_sleep_wakeup, @function
@@ -132,10 +132,10 @@ __pi_thread_sleep_wakeup:
 
 
 
-    .global __pi_evt_signal_wait_end
-    .type   __pi_evt_signal_wait_end, @function
+    .global __pi_evt_sig_wait_end
+    .type   __pi_evt_sig_wait_end, @function
     // This gets called when we were waiting for a signal event and it got notified
-__pi_evt_signal_wait_end:
+__pi_evt_sig_wait_end:
     // Restore the information we saved when we entered and leave
     lw      s0, 0(sp)
     lw      s1, 8(sp)
@@ -147,7 +147,7 @@ __pi_evt_signal_wait_end:
 
 
     // This gets called when there are tasks to handle before going to sleep
-__pi_evt_signal_wait_handle_tasks:
+__pi_evt_sig_wait_handle_tasks:
     // Pop them one by one
     lw      t6, PI_EVT_T_NEXT(t3)
     lw      t4, PI_EVT_T_CALLBACK(t3)
@@ -169,7 +169,7 @@ __pi_evt_signal_wait_handle_tasks:
 
 
     // This can be called from event wait routine to schedule another thread
-__pi_evt_signal_wait_switch_thread:
+__pi_evt_sig_wait_switch_thread:
     // We can safely call this C function since we come from a C call and we saved
     // preserved registers
     jal    ra, __pi_thread_switch_to_next
@@ -177,4 +177,4 @@ __pi_evt_signal_wait_switch_thread:
     // unblock the thread if the event is done
     j      __pi_thread_handle_work_items
 
-    .size   __pi_evt_signal_wait_end, . - __pi_evt_signal_wait_end
+    .size   __pi_evt_sig_wait_end, . - __pi_evt_sig_wait_end

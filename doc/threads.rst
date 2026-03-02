@@ -69,7 +69,7 @@ additional threads solely for deferred processing.
 Interaction with Events
 ***********************
 
-Threads and events are closely integrated. Calling :c:func:`pi_evt_signal_wait` blocks the
+Threads and events are closely integrated. Calling :c:func:`pi_evt_sig_wait` blocks the
 calling thread until the given event is notified. While blocked, the thread still processes its
 task queue and may be temporarily switched out in favour of other ready threads.
 

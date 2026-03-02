@@ -33,7 +33,7 @@ typedef struct pi_evt_s pi_evt_t;
  * Once an event is initialized with this function, it becomes a signal event.
  * The signal event can then be passed to any asynchronous function so that the caller is notified
  * of the function's completion.
- * The caller can call pi_evt_signal_wait() to block until the function completes.
+ * The caller can call pi_evt_sig_wait() to block until the function completes.
  *
  * @param event Pointer to the event.
  *
@@ -44,7 +44,7 @@ typedef struct pi_evt_s pi_evt_t;
  * @return Pointer to the event.
  *
  */
-ALWAYS_INLINE pi_evt_t *pi_evt_signal(pi_evt_t *event);
+ALWAYS_INLINE pi_evt_t *pi_evt_sig_init(pi_evt_t *event);
 
 /**
  * @brief Initialize an event as a callback event.
@@ -67,7 +67,7 @@ ALWAYS_INLINE pi_evt_t *pi_evt_signal(pi_evt_t *event);
  * @return Pointer to the event.
  *
  */
-ALWAYS_INLINE pi_evt_t *pi_evt_cb(pi_evt_t *event, void (*callback)(pi_evt_t*));
+ALWAYS_INLINE pi_evt_t *pi_evt_cb_init(pi_evt_t *event, void (*callback)(pi_evt_t*));
 
 /**
  * @brief Initialize an event as a task event.
@@ -85,7 +85,7 @@ ALWAYS_INLINE pi_evt_t *pi_evt_cb(pi_evt_t *event, void (*callback)(pi_evt_t*));
  * @return Pointer to the event.
  *
  */
-ALWAYS_INLINE pi_evt_t *pi_evt_task(pi_evt_t *event, void (*callback)(pi_evt_t*), pi_thread_t *thread);
+ALWAYS_INLINE pi_evt_t *pi_evt_task_init(pi_evt_t *event, void (*callback)(pi_evt_t*), pi_thread_t *thread);
 
 /**
  * @brief Notify the completion of an event.
@@ -94,7 +94,7 @@ ALWAYS_INLINE pi_evt_t *pi_evt_task(pi_evt_t *event, void (*callback)(pi_evt_t*)
  * initialized.
  *
  * In the case of a signal event, it flags it as completed and unblocks any thread waiting on it. If
- * any thread then tries to wait for it by calling pi_evt_signal_wait(), it will immediately
+ * any thread then tries to wait for it by calling pi_evt_sig_wait(), it will immediately
  * return.
  *
  * In the case of a callback event, the callback is called immediately from the caller's context, even
@@ -136,12 +136,12 @@ ALWAYS_INLINE void pi_evt_notify_unsafe(pi_evt_t *event);
  *
  * @param event Pointer to the event.
  */
-ALWAYS_INLINE void pi_evt_signal_wait(pi_evt_t *event);
+ALWAYS_INLINE void pi_evt_sig_wait(pi_evt_t *event);
 
 /**
  * @brief Wait for the completion of a signal event without internal locking.
  *
- * This behaves exactly as pi_evt_signal_wait() but does not perform any internal locking.
+ * This behaves exactly as pi_evt_sig_wait() but does not perform any internal locking.
  * This function must be called from a context where interrupts are already disabled or from
  * an interrupt handler to ensure thread safety.
  * This variant provides better performance by skipping the lock/unlock operations.
@@ -151,7 +151,7 @@ ALWAYS_INLINE void pi_evt_signal_wait(pi_evt_t *event);
  * @warning This function must only be called from a safe context (e.g., with interrupts disabled
  * or from an interrupt handler). Calling it from an unsafe context may lead to race conditions.
  */
-ALWAYS_INLINE void pi_evt_signal_wait_unsafe(pi_evt_t *event);
+ALWAYS_INLINE void pi_evt_sig_wait_unsafe(pi_evt_t *event);
 
 /**
  * \brief Get event status.

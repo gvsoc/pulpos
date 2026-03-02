@@ -29,9 +29,9 @@ Events can be configured in three different forms, each suited to different use 
 Signal Events
 *************
 
-With signal events, the caller initializes the event using :c:func:`pi_evt_signal`, initiates
+With signal events, the caller initializes the event using :c:func:`pi_evt_sig_init`, initiates
 an asynchronous operation, continues with other tasks, and then explicitly waits for the event
-by calling :c:func:`pi_evt_signal_wait` when the result is needed. The wait call blocks the
+by calling :c:func:`pi_evt_sig_wait` when the result is needed. The wait call blocks the
 caller until the asynchronous operation signals completion. This approach is useful when the
 calling thread can productively work on other tasks before needing the result.
 
@@ -39,7 +39,7 @@ Callback Events
 ***************
 
 Callback events provide immediate notification through a function pointer supplied during event
-initialization with :c:func:`pi_evt_cb`. When the asynchronous operation completes, it invokes
+initialization with :c:func:`pi_evt_cb_init`. When the asynchronous operation completes, it invokes
 the callback function directly, potentially from within an interrupt context. This form enables
 the fastest possible response to completion but requires the callback to be interrupt-safe and
 to execute quickly.
@@ -48,7 +48,7 @@ Tasks
 *****
 
 Tasks provide deferred notification through a work queue system. The event is initialized using
-:c:func:`pi_evt_task` with a callback and a target thread. Instead of executing the notification
+:c:func:`pi_evt_task_init` with a callback and a target thread. Instead of executing the notification
 callback immediately (potentially from interrupt context), the callback is scheduled on the
 target thread's work queue. This approach combines the benefits of asynchronous notification
 with the safety of executing callbacks in thread context rather than interrupt context, making it

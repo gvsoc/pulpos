@@ -54,15 +54,15 @@ int main()
 
     printf("Entered example\n");
 
-    pi_evt_signal(&end_event);
+    pi_evt_sig_init(&end_event);
 
-    pi_evt_notify(pi_evt_task(&task0_event, task0_handler, NULL));
+    pi_evt_notify(pi_evt_task_init(&task0_event, task0_handler, NULL));
 
-    pi_evt_notify(pi_evt_task(&task1_event, task1_handler, NULL));
+    pi_evt_notify(pi_evt_task_init(&task1_event, task1_handler, NULL));
 
-    pi_evt_notify_delayed(pi_evt_cb(&delayed_event, delay_handler), PERIOD0);
+    pi_evt_notify_delayed(pi_evt_cb_init(&delayed_event, delay_handler), PERIOD0);
 
-    pi_evt_signal_wait(&end_event);
+    pi_evt_sig_wait(&end_event);
 
     return 0;
 }

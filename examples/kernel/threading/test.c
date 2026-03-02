@@ -41,13 +41,13 @@ int main()
     printf("Entered example, creating threads\n");
 
     if (pi_thread_create(&thread0, "thread0", thread0_entry, NULL, 0, stack0,
-            STACK_SIZE, pi_evt_signal(&event0))) return -1;
+            STACK_SIZE, pi_evt_sig_init(&event0))) return -1;
 
     if (pi_thread_create(&thread1, "thread1", thread1_entry, NULL, 0, stack1,
-            STACK_SIZE, pi_evt_signal(&event1))) return -1;
+            STACK_SIZE, pi_evt_sig_init(&event1))) return -1;
 
-    pi_evt_signal_wait(&event0);
-    pi_evt_signal_wait(&event1);
+    pi_evt_sig_wait(&event0);
+    pi_evt_sig_wait(&event1);
 
     if (pi_thread_status_get(&thread0)) return -1;
     if (pi_thread_status_get(&thread1)) return -1;
