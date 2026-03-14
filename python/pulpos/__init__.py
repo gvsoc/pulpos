@@ -11,6 +11,8 @@ import logging
 import collections
 from types import ModuleType
 from typing import Any, List, Tuple, Protocol
+
+from gvrun.config import Config
 try:
     from typing import override  # Python 3.12+
 except ImportError:
@@ -364,7 +366,23 @@ class SourceContainer(SystemTreeNode):
         self.__subdirs_tree_stack: deque[_ModuleImportNode] = collections.deque()
         self.__subdirs_top = _ModuleImportNode()
         self.__subdirs_tree_stack.append(self.__subdirs_top)
+        self.__config: Config | None = None
 
+    def set_config(self, config: Config):
+        """Set the target configuration for this source container.
+
+        During compilation, the configuration is used to generate C headers (under a ``config/``
+        subdirectory of the build directory) containing target-specific preprocessor definitions.
+        These headers are automatically added to the include path so that all sources in this
+        container can access target characteristics at compile time.
+
+        Parameters
+        ----------
+        config : Config
+            The target configuration object whose ``generate_headers`` method will be called
+            at build time to emit the headers.
+        """
+        self.__config = config
 
     def set_toolchain(self, toolchain: Toolchain):
         """Set the toolchain.
@@ -824,6 +842,11 @@ class SourceContainer(SystemTreeNode):
 
         Generates associated template files
         """
+        if self.__config is not None:
+            path = os.path.join(builddir, 'config')
+            self.__config.generate_headers(path)
+            self.add_includes(builddir)
+
         for propfile in self.__template_files.values():
             propfile._gen()
 
@@ -897,7 +920,6 @@ class PulposExecutable(SourceContainer, Executable):
 
         target._add_executable(self)
 
-
     def get_binary(self) -> str:
         """Get the executable binary.
 
@@ -930,6 +952,7 @@ class PulposExecutable(SourceContainer, Executable):
     def _compile(self, builder: Builder, builddir: str):
         """Compile the executable
         """
+
         toolchain = self._get_toolchain()
 
         if toolchain is None:
