@@ -4,6 +4,8 @@
 #
 # Authors: Germain Haugou (germain.haugou@gmail.com)
 
+from __future__ import annotations
+
 from pulpos import PulposModule, SourceContainer, PulposExecutable, get_home
 from typing import cast, Any
 from gvrun.systree import SystemTreeNode

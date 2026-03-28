@@ -4,6 +4,8 @@
 #
 # Authors: Germain Haugou (germain.haugou@gmail.com)
 
+from __future__ import annotations
+
 import os
 import pulpos
 from typing import cast
