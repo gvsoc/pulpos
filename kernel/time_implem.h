@@ -7,7 +7,7 @@
 ALWAYS_INLINE void pi_evt_timed_cancel(pi_evt_t *event)
 {
     int irq = pi_irq_lock();
-    pi_evt_timed_cancel_safe(event);
+    pi_evt_timed_cancel_unsafe(event);
     pi_irq_unlock(irq);
 }
 

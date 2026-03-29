@@ -74,7 +74,7 @@ ALWAYS_INLINE void pi_evt_timed_cancel(pi_evt_t *event);
  *
  * @param event Pointer to the event.
  */
-void pi_evt_timed_cancel_safe(pi_evt_t *event);
+void pi_evt_timed_cancel_unsafe(pi_evt_t *event);
 
 /**
  * @brief Get current time in microseconds.
