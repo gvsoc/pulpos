@@ -29,6 +29,7 @@ from pulpos.toolchain import Toolchain, ToolchainCFlags, ToolchainLdFlags
 from gvrun.builder import Builder
 from gvrun.systree import Executable, SystemTreeNode
 from collections import deque
+from gvrun.header_gen import generate_headers
 
 # Make sure we look for sources in every directory specified in PULPOS_MODULES
 _modules = os.environ.get('PULPOS_MODULES')
@@ -846,7 +847,7 @@ class SourceContainer(SystemTreeNode):
         """
         if self.__config is not None:
             path = os.path.join(builddir, 'config')
-            self.__config.generate_headers(path)
+            generate_headers(self.__config, path)
             self.add_includes(builddir)
 
         for propfile in self.__template_files.values():
