@@ -107,8 +107,10 @@ void __pi_init_start()
     __pi_libc_start();
 #endif
 
+#ifdef CONFIG_IRQ
     // Now now the minimal init are done, we can activate interruptions
     __pi_irq_global_enable();
+#endif
 
     int retval = main();
 
