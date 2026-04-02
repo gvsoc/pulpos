@@ -57,9 +57,9 @@ static void bench_0_cb_while_active() {
     pi_perf_stop();
     pi_cycle_stop();
 
-    printf("    Cycles per interrupt: %f\n", (float)pi_cycle_get32() / BENCH_0_NB_ITER);
-    printf("    Active cycles per interrupt: %f\n", (float)pi_perf_read(PI_PERF_ACTIVE_CYCLES) / BENCH_0_NB_ITER);
-    printf("    Instructions per interrupt: %f\n", (float)pi_perf_read(PI_PERF_INSTR) / BENCH_0_NB_ITER);
+    printf("    [active] Cycles per interrupt: %f\n", (float)pi_cycle_get32() / BENCH_0_NB_ITER);
+    printf("    [active] Active cycles per interrupt: %f\n", (float)pi_perf_read(PI_PERF_ACTIVE_CYCLES) / BENCH_0_NB_ITER);
+    printf("    [active] Instructions per interrupt: %f\n", (float)pi_perf_read(PI_PERF_INSTR) / BENCH_0_NB_ITER);
     printf("\n");
 }
 
@@ -121,9 +121,9 @@ static void bench_1_cb_while_idle() {
     pi_cycle_stop();
     pi_irq_unlock(irq_state);
 
-    printf("    Cycles per interrupt: %f\n", (float)pi_cycle_get32() / BENCH_1_NB_ITER);
-    printf("    Active cycles per interrupt: %f\n", (float)pi_perf_read(PI_PERF_ACTIVE_CYCLES) / BENCH_1_NB_ITER);
-    printf("    Instructions per interrupt: %f\n", (float)pi_perf_read(PI_PERF_INSTR) / BENCH_1_NB_ITER);
+    printf("    [idle] Cycles per interrupt: %f\n", (float)pi_cycle_get32() / BENCH_1_NB_ITER);
+    printf("    [idle] Active cycles per interrupt: %f\n", (float)pi_perf_read(PI_PERF_ACTIVE_CYCLES) / BENCH_1_NB_ITER);
+    printf("    [idle] Instructions per interrupt: %f\n", (float)pi_perf_read(PI_PERF_INSTR) / BENCH_1_NB_ITER);
     printf("\n");
 }
 
