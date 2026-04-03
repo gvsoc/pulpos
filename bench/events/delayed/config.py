@@ -10,7 +10,7 @@ import pulpos
 
 def declare(target):
 
-    hello = pulpos.new_executable('test', target)
+    test = pulpos.new_executable('test', target)
 
-    hello.set_optimization_level('-O3 -g')
-    hello.add_sources('test.c')
+    test.set_optimization_level('-O3 -g')
+    test.add_sources('test.c')
