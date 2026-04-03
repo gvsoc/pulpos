@@ -97,6 +97,16 @@ static void __pi_thread_state_init(pi_thread_t *thread)
     thread->not_waiting = 1;
 }
 
+void pi_thread_yield()
+{
+    int irq = pi_irq_lock();
+    if (__pi_thread_ready)
+    {
+        __pi_thread_switch_to_next();
+    }
+    pi_irq_unlock(irq);
+}
+
 void pi_thread_exit()
 {
     pi_irq_lock();
@@ -160,7 +170,7 @@ void __pi_thread_sched_init()
     __pi_thread_current = &__pi_thread_main;
     __pi_thread_state_init(&__pi_thread_main);
     __pi_thread_main.ready = 1;
-    __pi_thread_main.priority = PI_THREAD_MAX_PRIORITIES - 1;
+    __pi_thread_main.priority = 0;
     __pi_thread_current_running = 1;
     __pi_thread_resched = 0;
     __pi_thread_force_resched = 0;
