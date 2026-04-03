@@ -62,6 +62,14 @@ ALWAYS_INLINE void pi_thread_status_set(int status);
 ALWAYS_INLINE int pi_thread_status_get(pi_thread_t *thread);
 
 /**
+ * @brief Yield the current thread.
+ *
+ * Voluntarily gives up the CPU to the next ready thread of the same or higher
+ * priority. If no other thread is ready, the current thread continues.
+ */
+void pi_thread_yield();
+
+/**
  * @brief Exit the current thread.
  *
  * Terminates the currently executing thread and performs cleanup.
