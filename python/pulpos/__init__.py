@@ -193,6 +193,20 @@ class _Include:
     external: bool = False
 
 
+@dataclasses.dataclass
+class SourceCode:
+    """
+    A source file with its resolved absolute path.
+
+    Attributes
+    ----------
+    name (str): The relative source name as provided (used for output object path).
+    path (str | None): The eagerly resolved absolute path, or None if not yet resolved.
+    """
+    name: str
+    path: str | None = None
+
+
 class TemplateFile():
     """
     Container for template files
@@ -539,16 +553,23 @@ class SourceContainer(SystemTreeNode):
 
         Sources are attached to this container are are for now compiled withing the executable
         compilation.
-        Sources can be a single file or a list of files
+        Sources can be a single file or a list of files.
+        When called from within an imported subdirectory, sources can be specified relative to that
+        subdirectory and will be eagerly resolved to absolute paths.
 
         Parameters
         ----------
         sources (list[str] | str): The set of sources.
         """
-        if isinstance(sources, list):
-            self.__sources += sources
-        else:
-            self.__sources.append(sources)
+        if not isinstance(sources, list):
+            sources = [sources]
+        for source in sources:
+            path = None
+            if len(self.__path_stack) > 0:
+                candidate = os.path.join(self.__path_stack[-1], source)
+                if os.path.exists(candidate):
+                    path = candidate
+            self.__sources.append(SourceCode(source, path))
 
     def add_subdirectory(self, path: str, target: SystemTreeNode):
         """Add a subdirectory.
@@ -740,7 +761,9 @@ class SourceContainer(SystemTreeNode):
         """
         sources = []
         for source in self.__sources:
-            sources.append([source, self._get_source_path(source)])
+            resolved = source.path if source.path is not None \
+                else self._get_source_path(source.name)
+            sources.append([source.name, resolved])
 
         for child in self._get_childs():
             sources += child._get_sources()
@@ -792,10 +815,11 @@ class SourceContainer(SystemTreeNode):
         commands = []
         for source in self.__sources:
             deps = []
-            source_path = self._get_source_path(source)
-            path = os.path.join(builddir, source.rstrip('.c').rstrip('.S') + '.o')
+            source_path = source.path if source.path is not None \
+                else self._get_source_path(source.name)
+            path = os.path.join(builddir, source.name.rstrip('.c').rstrip('.S') + '.o')
 
-            dep_file = os.path.join(builddir, source.rstrip('.c').rstrip('.S') + '.d')
+            dep_file = os.path.join(builddir, source.name.rstrip('.c').rstrip('.S') + '.d')
             if os.path.exists(dep_file):
                 with open(dep_file, 'r') as file:
                     content = file.read().replace("\\\n", " ")
@@ -827,7 +851,7 @@ class SourceContainer(SystemTreeNode):
 
                     flags = ToolchainCFlags(
                         builddir=builddir,
-                        source_name=source,
+                        source_name=source.name,
                         source_path=source_path,
                         cflags=cflags,
                         includes=self._get_includes(internal=True),
