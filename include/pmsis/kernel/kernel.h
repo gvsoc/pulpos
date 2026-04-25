@@ -7,6 +7,10 @@
 #pragma once
 
 
+#ifndef LANGUAGE_ASSEMBLY
+typedef struct pi_device_s pi_device_t;
+#endif
+
 #define ALWAYS_INLINE static inline __attribute__((always_inline))
 
 // This macro can be used to include a chip-dependent file for the current chip
