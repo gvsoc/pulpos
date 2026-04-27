@@ -94,6 +94,12 @@ class Toolchain:
     def get_family(self) -> str:
         return self.family
 
+    def get_extra_cflags(self) -> list[str]:
+        """Return cflags that should be applied to every compile when this
+        toolchain is active. Default is empty; subclasses override for
+        toolchain-specific flags."""
+        return []
+
     @abc.abstractmethod
     def _get_compile_command(self, flags: ToolchainCFlags) -> str:
         """Get the compile command.
@@ -193,10 +199,16 @@ class _LlvmToolchain(Toolchain):
 
 class _GccToolchain(Toolchain):
     """
-    Parent toolchain class for LLVM toolchains
+    Parent toolchain class for GCC toolchains
     """
     def __init__(self, config: ToolchainConfig):
         super().__init__(config, family='gcc')
+
+    def get_extra_cflags(self) -> list[str]:
+        # GCC-only: stop the loop-distribute pass from rewriting
+        # hand-rolled byte/word loops as memcpy/memset, which freestanding
+        # PulpOS does not link against.
+        return ['-fno-tree-loop-distribute-patterns']
 
 
 

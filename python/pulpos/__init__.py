@@ -849,6 +849,8 @@ class SourceContainer(SystemTreeNode):
                     if optim_level is not None:
                         cflags.append(optim_level)
 
+                    cflags += toolchain.get_extra_cflags()
+
                     flags = ToolchainCFlags(
                         builddir=builddir,
                         source_name=source.name,

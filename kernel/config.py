@@ -43,5 +43,3 @@ def declare(target, container: SourceContainer):
     container.add_sources([
         'kernel/init.c',
     ])
-
-    container.add_cflags('-fno-tree-loop-distribute-patterns')
