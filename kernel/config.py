@@ -40,6 +40,14 @@ def declare(target, container: SourceContainer):
             'kernel/event_asm.S',
         ])
 
+    alloc = BuildParameter(container, 'kernel.alloc', False, 'Enable memory allocator').value
+    if alloc:
+        container.add_define('CONFIG_KERNEL_ALLOC', 1)
+
+        container.add_sources([
+            'kernel/alloc.c',
+        ])
+
     container.add_sources([
         'kernel/init.c',
     ])

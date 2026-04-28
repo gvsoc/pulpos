@@ -13,6 +13,9 @@
 #ifdef CONFIG_THREAD
 #include <pmsis/kernel/thread.h>
 #endif
+#ifdef CONFIG_KERNEL_ALLOC
+#include <pmsis/kernel/alloc.h>
+#endif
 #include <kernel/link.h>
 #include <kernel/hal.h>
 #include <lib/libc/minimal/libc.h>
@@ -97,6 +100,10 @@ void __pi_init_start()
 
 #ifdef CONFIG_THREAD
     __pi_thread_sched_init();
+#endif
+
+#ifdef CONFIG_KERNEL_ALLOC
+    __pi_alloc_init();
 #endif
 
     // Call global and static constructors
