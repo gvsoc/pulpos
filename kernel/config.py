@@ -48,6 +48,13 @@ def declare(target, container: SourceContainer):
             'kernel/alloc.c',
         ])
 
+    fs = BuildParameter(container, 'kernel.fs', False, 'Enable file system layer').value
+    if fs:
+        if not alloc:
+            raise RuntimeError('kernel.fs requires kernel.alloc')
+        container.add_define('CONFIG_KERNEL_FS', 1)
+        container.add_subdirectory('fs', target)
+
     container.add_sources([
         'kernel/init.c',
     ])
