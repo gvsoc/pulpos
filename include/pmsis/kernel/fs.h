@@ -70,6 +70,9 @@ void pi_fs_close_async(pi_vfs_t *vfs, pi_fs_file_t *file, pi_fs_evt_t *event);
 /** @brief Read up to ``size`` bytes from the current position; returns the number actually read. */
 ssize_t pi_fs_read(pi_fs_file_t *file, void *ptr, size_t size);
 
+/** @brief Set the absolute read position. Local-only (no flash IO); returns 0 on success. */
+int pi_fs_seek(pi_fs_file_t *file, size_t offset);
+
 /** @brief Read (async). Status returns the byte count on completion. */
 ALWAYS_INLINE void pi_fs_read_async(pi_fs_file_t *file, void *ptr, size_t size,
                                     pi_fs_evt_t *event);

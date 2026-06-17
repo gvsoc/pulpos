@@ -14,7 +14,7 @@
 #include <string.h>
 
 #include <pmsis/kernel/fs.h>
-#include <arch/gap/gap9/drivers/mram_implem.h>
+#include <pmsis/bsp/bsp.h>      // PI_BSP_VFS (the board's /mram VFS)
 
 
 static const char *expected[3] = {
@@ -29,22 +29,14 @@ static const char *paths[3] = {
 };
 
 
-static pi_mram_t mram;
-
-PI_BSP_VFS_INST(test_vfs, { PI_BSP_VFS_MOUNT_POINT("/mram", &mram) });
-
-
 int main(void)
 {
     int errors = 0;
 
-    struct pi_mram_conf conf = { .size = 0x400000, .itf = 0, .frequency = 25000000 };
-    pi_mram_device_init(&mram, &conf);
-
     pi_fs_file_t files[3];
     for (int i = 0; i < 3; i++)
     {
-        if (pi_fs_open(&test_vfs, &files[i], paths[i], PI_FS_O_READ) != 0)
+        if (pi_fs_open(PI_BSP_VFS, &files[i], paths[i], PI_FS_O_READ) != 0)
         {
             printf("fs_multi FAIL: open[%d]\n", i);
             return -1;
@@ -107,14 +99,14 @@ int main(void)
 
     for (int i = 0; i < 3; i++)
     {
-        if (pi_fs_close(&test_vfs, &files[i]) != 0)
+        if (pi_fs_close(PI_BSP_VFS, &files[i]) != 0)
         {
             printf("fs_multi FAIL: close[%d]\n", i);
             errors++;
         }
     }
 
-    pi_fs_flush(&test_vfs);
+    pi_fs_flush(PI_BSP_VFS);
 
     if (errors)
     {

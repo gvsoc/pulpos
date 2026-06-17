@@ -83,6 +83,7 @@ struct pi_vfs_mp_fs_api_s
     void  (*close)  (void *fs, pi_fs_file_t *file, pi_fs_evt_t *event);
     void  (*read)   (void *fs, pi_fs_file_t *file, void *dest, size_t nbytes,
                      pi_fs_evt_t *event);
+    void  (*seek)   (void *fs, pi_fs_file_t *file, size_t offset);
     void *(*mount)  (pi_device_t *flash, uint32_t offset, uint32_t size, pi_fs_evt_t *event);
     void  (*unmount)(void *fs);
     void  (*stat)   (void *fs, const char *path, struct pi_fs_dirent *entry,

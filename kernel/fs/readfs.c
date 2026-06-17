@@ -156,6 +156,14 @@ static void __pi_fs_readfs_read(void *instance, pi_fs_file_t *file, void *dest, 
 }
 
 
+static void __pi_fs_readfs_seek(void *instance, pi_fs_file_t *file, size_t offset)
+{
+    (void)instance;
+    pi_fs_readfs_file_t *rf = (pi_fs_readfs_file_t *)file->data;
+    rf->offset = (uint32_t)offset;
+}
+
+
 static void __pi_fs_readfs_stat(void *instance, const char *path, struct pi_fs_dirent *entry,
                                 pi_fs_evt_t *event)
 {
@@ -255,6 +263,7 @@ pi_vfs_mp_fs_api_t __pi_fs_readfs_api =
     .open    = __pi_fs_readfs_open,
     .close   = __pi_fs_readfs_close,
     .read    = __pi_fs_readfs_read,
+    .seek    = __pi_fs_readfs_seek,
     .mount   = __pi_fs_readfs_mount,
     .unmount = __pi_fs_readfs_unmount,
     .stat    = __pi_fs_readfs_stat,

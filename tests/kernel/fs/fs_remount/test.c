@@ -15,21 +15,16 @@
 #include <string.h>
 
 #include <pmsis/kernel/fs.h>
-#include <arch/gap/gap9/drivers/mram_implem.h>
+#include <pmsis/bsp/bsp.h>      // PI_BSP_VFS (the board's /mram VFS)
 
 
 static const char *expected = "readfs remount cycle test payload\n";
 
 
-static pi_mram_t mram;
-
-PI_BSP_VFS_INST(test_vfs, { PI_BSP_VFS_MOUNT_POINT("/mram", &mram) });
-
-
 static int read_full_and_check(const char *label)
 {
     pi_fs_file_t file;
-    if (pi_fs_open(&test_vfs, &file, "/mram/readfs/data.txt", PI_FS_O_READ) != 0)
+    if (pi_fs_open(PI_BSP_VFS, &file, "/mram/readfs/data.txt", PI_FS_O_READ) != 0)
     {
         printf("fs_remount FAIL: %s open\n", label);
         return 1;
@@ -37,7 +32,7 @@ static int read_full_and_check(const char *label)
 
     char    buf[128];
     ssize_t n = pi_fs_read(&file, buf, sizeof(buf) - 1);
-    pi_fs_close(&test_vfs, &file);
+    pi_fs_close(PI_BSP_VFS, &file);
 
     if (n < 0 || (size_t)n != strlen(expected))
     {
@@ -60,12 +55,9 @@ int main(void)
 {
     int errors = 0;
 
-    struct pi_mram_conf conf = { .size = 0x400000, .itf = 0, .frequency = 25000000 };
-    pi_mram_device_init(&mram, &conf);
-
     errors += read_full_and_check("first");
 
-    if (pi_fs_flush(&test_vfs) != 0)
+    if (pi_fs_flush(PI_BSP_VFS) != 0)
     {
         printf("fs_remount FAIL: flush\n");
         errors++;
@@ -75,7 +67,7 @@ int main(void)
     // cover the queue/operation-done bookkeeping for back-to-back full-mount cycles.
     errors += read_full_and_check("second");
 
-    if (pi_fs_flush(&test_vfs) != 0)
+    if (pi_fs_flush(PI_BSP_VFS) != 0)
     {
         printf("fs_remount FAIL: second flush\n");
         errors++;

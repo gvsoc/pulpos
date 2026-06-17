@@ -15,12 +15,7 @@
 #include <string.h>
 
 #include <pmsis/kernel/fs.h>
-#include <arch/gap/gap9/drivers/mram_implem.h>
-
-
-static pi_mram_t mram;
-
-PI_BSP_VFS_INST(test_vfs, { PI_BSP_VFS_MOUNT_POINT("/mram", &mram) });
+#include <pmsis/bsp/bsp.h>      // PI_BSP_VFS (the board's /mram VFS)
 
 
 static int read_and_check(pi_vfs_t *vfs, const char *path, const char *expected)
@@ -79,27 +74,20 @@ int main(void)
 {
     int errors = 0;
 
-    struct pi_mram_conf conf = {
-        .size      = 0x400000,
-        .itf       = 0,
-        .frequency = 25000000,
-    };
-    pi_mram_device_init(&mram, &conf);
-
-    errors += read_and_check(&test_vfs, "/mram/readfs/hello.txt",
+    errors += read_and_check(PI_BSP_VFS, "/mram/readfs/hello.txt",
                              "Hello, readfs!\n");
-    errors += read_and_check(&test_vfs, "/mram/readfs/world.txt",
+    errors += read_and_check(PI_BSP_VFS, "/mram/readfs/world.txt",
                              "The quick brown fox jumps over the lazy dog.\n");
 
     // Stat for a missing file should fail without crashing.
     struct pi_fs_dirent ent;
-    if (pi_fs_stat(&test_vfs, "/mram/readfs/missing.txt", &ent) == 0)
+    if (pi_fs_stat(PI_BSP_VFS, "/mram/readfs/missing.txt", &ent) == 0)
     {
         printf("fs_smoke FAIL: stat of missing file unexpectedly succeeded\n");
         errors++;
     }
 
-    if (pi_fs_flush(&test_vfs) != 0)
+    if (pi_fs_flush(PI_BSP_VFS) != 0)
     {
         printf("fs_smoke FAIL: flush\n");
         errors++;

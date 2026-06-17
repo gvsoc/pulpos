@@ -491,6 +491,19 @@ ssize_t pi_fs_read(pi_fs_file_t *file, void *ptr, size_t size)
 }
 
 
+int pi_fs_seek(pi_fs_file_t *file, size_t offset)
+{
+    // Seek is purely local to the FS driver (it just moves the read cursor), so there is no
+    // async flash op to wait on — dispatch straight through the vtable.
+    if (file->api->seek == NULL)
+    {
+        return -1;
+    }
+    file->api->seek(file->instance, file, offset);
+    return 0;
+}
+
+
 int pi_fs_stat(pi_vfs_t *vfs, const char *path, struct pi_fs_dirent *entry)
 {
     pi_fs_evt_t event;

@@ -13,7 +13,7 @@
 #include <string.h>
 
 #include <pmsis/kernel/fs.h>
-#include <arch/gap/gap9/drivers/mram_implem.h>
+#include <pmsis/bsp/bsp.h>      // PI_BSP_VFS (the board's /mram VFS)
 
 
 static const char *expected =
@@ -21,20 +21,12 @@ static const char *expected =
     "ut labore et dolore magna aliqua.\n";
 
 
-static pi_mram_t mram;
-
-PI_BSP_VFS_INST(test_vfs, { PI_BSP_VFS_MOUNT_POINT("/mram", &mram) });
-
-
 int main(void)
 {
     int errors = 0;
 
-    struct pi_mram_conf conf = { .size = 0x400000, .itf = 0, .frequency = 25000000 };
-    pi_mram_device_init(&mram, &conf);
-
     pi_fs_file_t file;
-    if (pi_fs_open(&test_vfs, &file, "/mram/readfs/lorem.txt", PI_FS_O_READ) != 0)
+    if (pi_fs_open(PI_BSP_VFS, &file, "/mram/readfs/lorem.txt", PI_FS_O_READ) != 0)
     {
         printf("fs_partial FAIL: open\n");
         return -1;
@@ -97,8 +89,8 @@ int main(void)
         errors++;
     }
 
-    pi_fs_close(&test_vfs, &file);
-    pi_fs_flush(&test_vfs);
+    pi_fs_close(PI_BSP_VFS, &file);
+    pi_fs_flush(PI_BSP_VFS);
 
     if (errors)
     {
