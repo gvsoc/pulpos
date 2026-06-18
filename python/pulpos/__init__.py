@@ -375,6 +375,7 @@ class SourceContainer(SystemTreeNode):
         self.__defines = []
         self.__includes = []
         self.__template_files = {}
+        self.__build_steps = []
         # Stack of included config path, used to determine absolute path of the config files
         self.__path_stack: deque[str] = collections.deque()
         self.__toolchain = None
@@ -400,6 +401,30 @@ class SourceContainer(SystemTreeNode):
             at build time to emit the headers.
         """
         self.__config = config
+
+    def add_build_step(self, callback):
+        """Register a build-time generation step.
+
+        The callback is invoked during the compile phase (``gvrun compile`` / ``build``),
+        before this container's sources are gathered and compiled. Use it to generate
+        sources (or other build artifacts) that must exist before compilation, e.g. by
+        running an external code generator. Unlike work done in ``config.py``'s
+        ``declare()`` (which runs for every gvrun command), a build step runs only when
+        the target is actually built.
+
+        The callback receives the build directory as its only argument.
+
+        Parameters
+        ----------
+        callback (Callable[[str], None]): The build step. Called once per compile with
+            the build directory path.
+        """
+        self.__build_steps.append(callback)
+
+    def _run_build_steps(self, builddir: str):
+        """Run the registered build steps. Reserved for internal usage."""
+        for callback in self.__build_steps:
+            callback(builddir)
 
     def set_toolchain(self, toolchain: Toolchain):
         """Set the toolchain.
@@ -871,6 +896,8 @@ class SourceContainer(SystemTreeNode):
 
         Generates associated template files
         """
+        self._run_build_steps(builddir)
+
         if self.__config is not None:
             path = os.path.join(builddir, 'config')
             generate_headers(self.__config, path)
@@ -981,6 +1008,10 @@ class PulposExecutable(SourceContainer, Executable):
     def _compile(self, builder: Builder, builddir: str):
         """Compile the executable
         """
+
+        # Run any registered build-time generators first so that generated sources
+        # exist before they are gathered and stat'd below.
+        self._run_build_steps(builddir)
 
         toolchain = self._get_toolchain()
 
