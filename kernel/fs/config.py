@@ -15,4 +15,5 @@ def declare(target, container: SourceContainer):
     container.add_sources([
         'kernel/fs/fs.c',
         'kernel/fs/readfs.c',
+        'kernel/fs/hostfs.c',
     ])

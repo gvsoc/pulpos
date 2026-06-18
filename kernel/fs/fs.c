@@ -271,6 +271,16 @@ static void __pi_fs_get_fs(pi_vfs_t *vfs, const char *file_name,
         return;
     }
 
+    // Flash-less mount point: a host (semi-hosting) file system. There is no flash to open and
+    // no partition table to read — resolve straight to the shared hostfs instance. The VFS path
+    // after the mount prefix (leading '/' kept) is the absolute host path, e.g.
+    // "/host/home/me/in.bin" -> "/home/me/in.bin".
+    if (found_mp->flash == NULL)
+    {
+        vfs->callback(vfs, &__pi_fs_hostfs_mp_fs, &file_name[strlen(found_mp->path)]);
+        return;
+    }
+
     const char *flash_file_name = &file_name[strlen(found_mp->path) + 1];
     vfs->current_mp        = found_mp;
     vfs->current_file_name = flash_file_name;

@@ -23,8 +23,11 @@ extern "C" {
  */
 
 
-// Open mode flags. Only read is supported by the readfs driver.
-#define PI_FS_O_READ  0x01
+// Open mode flags. Only read is supported by the readfs driver; the hostfs driver also accepts
+// write / append, but the VFS open path currently forces read-only.
+#define PI_FS_O_READ   0x01
+#define PI_FS_O_WRITE  0x02
+#define PI_FS_O_APPEND 0x04
 
 typedef uint32_t pi_fs_mode_t;
 typedef struct pi_vfs_s pi_vfs_t;
@@ -111,11 +114,15 @@ void pi_fs_flush_async(pi_vfs_t *vfs, pi_fs_evt_t *event);
  * @code
  * PI_BSP_VFS_INST(my_vfs, {
  *     PI_BSP_VFS_MOUNT_POINT("/mram", &mram_dev),
+ *     PI_BSP_VFS_HOST_MOUNT_POINT("/host"),
  * });
  * @endcode
+ *
+ * The mount-point list is taken as a variadic argument so the top-level commas between
+ * entries are not mistaken for macro-argument separators.
  */
-#define PI_BSP_VFS_INST(instance_name, user_mount_points) \
-    static pi_vfs_mp_t __pi_bsp_vfs_mps_##instance_name[] = user_mount_points; \
+#define PI_BSP_VFS_INST(instance_name, ...) \
+    static pi_vfs_mp_t __pi_bsp_vfs_mps_##instance_name[] = __VA_ARGS__; \
     pi_vfs_t instance_name = { \
         .nb_mount_points = sizeof(__pi_bsp_vfs_mps_##instance_name) / sizeof(pi_vfs_mp_t), \
         .mount_points    = __pi_bsp_vfs_mps_##instance_name, \
@@ -126,6 +133,16 @@ void pi_fs_flush_async(pi_vfs_t *vfs, pi_fs_evt_t *event);
 /** @brief One mount-point entry inside ``PI_BSP_VFS_INST``. */
 #define PI_BSP_VFS_MOUNT_POINT(user_path, user_flash) \
     { .path = user_path, .flash = (pi_device_t *)user_flash, .opened = 0, .flash_opened = 0 }
+
+/**
+ * @brief A flash-less host (semi-hosting) mount point inside ``PI_BSP_VFS_INST``.
+ *
+ * Files under this prefix are read from the workstation running the simulator instead of from a
+ * flash image. The VFS path after the prefix is the absolute host path, e.g. with a mount at
+ * "/host", opening "/host/home/me/in.bin" reads "/home/me/in.bin" on the host.
+ */
+#define PI_BSP_VFS_HOST_MOUNT_POINT(user_path) \
+    { .path = user_path, .flash = NULL, .opened = 0, .flash_opened = 0 }
 
 /**
  * @}
