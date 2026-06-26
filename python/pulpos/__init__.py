@@ -863,31 +863,42 @@ class SourceContainer(SystemTreeNode):
             if os.path.exists(path):
                 obj_timestamp = os.path.getmtime(path)
 
+            # Recompile the source if it is missing or if any of its
+            # dependencies is newer than the object. A source must be compiled
+            # at most once per build: enqueuing one command per out-of-date
+            # dependency would schedule several identical compilations writing
+            # the same object file in parallel, racing each other (and ccache).
+            needs_compile = False
             for dep in deps:
-                src_timestamp = os.path.getmtime(dep)
+                if not os.path.exists(dep):
+                    needs_compile = True
+                    break
 
-                if src_timestamp >= obj_timestamp:
+                if os.path.getmtime(dep) >= obj_timestamp:
+                    needs_compile = True
+                    break
 
-                    cflags = self._get_cflags()
+            if needs_compile:
+                cflags = self._get_cflags()
 
-                    optim_level = self._get_optimization_level()
-                    if optim_level is not None:
-                        cflags.append(optim_level)
+                optim_level = self._get_optimization_level()
+                if optim_level is not None:
+                    cflags.append(optim_level)
 
-                    cflags += toolchain.get_extra_cflags()
+                cflags += toolchain.get_extra_cflags()
 
-                    flags = ToolchainCFlags(
-                        builddir=builddir,
-                        source_name=source.name,
-                        source_path=source_path,
-                        cflags=cflags,
-                        includes=self._get_includes(internal=True),
-                        defines=self._get_defines(internal=True)
-                    )
+                flags = ToolchainCFlags(
+                    builddir=builddir,
+                    source_name=source.name,
+                    source_path=source_path,
+                    cflags=cflags,
+                    includes=self._get_includes(internal=True),
+                    defines=self._get_defines(internal=True)
+                )
 
-                    commands.append(
-                        _CompileCommand(builder, toolchain, flags)
-                    )
+                commands.append(
+                    _CompileCommand(builder, toolchain, flags)
+                )
 
         return commands
 
