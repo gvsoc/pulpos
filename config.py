@@ -54,6 +54,19 @@ def declare_flags(target, container):
 
     if platform == 'gvsoc':
         container.add_includes(f'{os.environ.get("GVSOC_HOME")}/include/target')
+        # GUI thread visualization. This is a pulpos/runtime concern, so the parameter is declared
+        # here rather than in gvrun. config.py declare() runs for every gvrun command, so declaring
+        # it on the top target makes it available both here at compile time (to enable the kernel's
+        # gv_vcd thread hooks) and to the GVSoC model's gen_gui at run time (to emit the flame-chart
+        # signals). The declaration is guarded so it is done only once even with several executables.
+        if target.get_parameter('/gui-threads') is None:
+            BuildParameter(target, 'gui-threads', False,
+                'Enable GUI thread visualization: builds the kernel with the gv_vcd thread hooks '
+                '(__GVSOC_GUI__) and makes the GVSoC GUI show one group per thread with its flame '
+                'chart. Off by default to avoid any runtime overhead.')
+        # Off by default to avoid runtime overhead; build with gui-threads=true to enable.
+        if container.get_parameter('/gui-threads'):
+            container.add_define('__GVSOC_GUI__', '1')
 
     container.add_cflags([
         '-fdata-sections', '-ffunction-sections', '-fno-jump-tables'
