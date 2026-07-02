@@ -48,6 +48,16 @@ def declare(target, container: SourceContainer):
             'kernel/alloc.c',
         ])
 
+    # Defaults to the top-level /memcheck property (set from the --memcheck run
+    # flag), so building and running with --memcheck compiles in the allocator
+    # instrumentation automatically. Still overridable per app via
+    # --parameter <exe>/kernel.memcheck=<bool>.
+    memcheck = BuildParameter(container, 'kernel.memcheck',
+        bool(container.get_parameter('/memcheck')),
+        'Declare allocations to the gvsoc memory checker (defaults to the --memcheck run flag)').value
+    if memcheck:
+        container.add_define('CONFIG_MEMCHECK', 1)
+
     fs = BuildParameter(container, 'kernel.fs', False, 'Enable file system layer').value
     if fs:
         if not alloc:

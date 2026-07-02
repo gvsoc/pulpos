@@ -23,10 +23,15 @@ pi_alloc_t __pi_mem_alloc_instances[PI_MEM_NB_ALLOCATORS];
 #define ALIGN_DOWN(addr, size) ((addr) & ~((size) - 1))
 
 
-void __pi_mem_alloc_init(pi_alloc_t *a, void *_chunk, size_t size)
+void __pi_mem_alloc_init(pi_alloc_t *a, void *_chunk, size_t size, int memcheck_mem_id)
 {
     pi_alloc_chunk_t *chunk = (pi_alloc_chunk_t *)ALIGN_UP((uintptr_t)_chunk, MIN_CHUNK_SIZE);
     a->first_free = chunk;
+#if defined(CONFIG_MEMCHECK) && defined(__PLATFORM_GVSOC__)
+    a->memcheck_mem_id = memcheck_mem_id;
+#else
+    (void)memcheck_mem_id;
+#endif
     size = size - ((uintptr_t)chunk - (uintptr_t)_chunk);
     if (size > 0)
     {
