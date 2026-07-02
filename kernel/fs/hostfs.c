@@ -30,8 +30,8 @@
 #include <kernel/semihost.h>
 
 
-// Semi-hosting open modes (indices into the host's open_modeflags table). Only read is reachable
-// through the VFS today (pi_fs_open forces read-only), but the full set is mapped for clarity.
+// Semi-hosting open modes (indices into the host's open_modeflags table). The VFS now forwards
+// the open flags, so read, write (truncate) and append are all reachable.
 #define HOSTFS_MODE_RDONLY 0
 #define HOSTFS_MODE_WRONLY 4   // O_WRONLY | O_CREAT | O_TRUNC
 #define HOSTFS_MODE_APPEND 8   // O_WRONLY | O_CREAT | O_APPEND
@@ -113,6 +113,26 @@ static void __pi_fs_hostfs_read(void *instance, pi_fs_file_t *file, void *dest, 
 }
 
 
+static void __pi_fs_hostfs_write(void *instance, pi_fs_file_t *file, const void *src, size_t size,
+                                 pi_fs_evt_t *event)
+{
+    (void)instance;
+
+    // The host write syscall returns the number of bytes it could NOT write (ARM semi-hosting
+    // convention), so the count actually written is the requested size minus that remainder.
+    int not_written = __pi_libc_semihost_write(__pi_fs_hostfs_get_fd(file),
+                                               (uint8_t *)(uintptr_t)src, (int)size);
+    int write_size = (int)size - not_written;
+    if (write_size < 0)
+    {
+        write_size = -1;
+    }
+
+    pi_evt_status_set(&event->header, write_size);
+    pi_evt_notify(&event->header);
+}
+
+
 static void __pi_fs_hostfs_seek(void *instance, pi_fs_file_t *file, size_t offset)
 {
     (void)instance;
@@ -155,6 +175,7 @@ pi_vfs_mp_fs_api_t __pi_fs_hostfs_api =
     .open    = __pi_fs_hostfs_open,
     .close   = __pi_fs_hostfs_close,
     .read    = __pi_fs_hostfs_read,
+    .write   = __pi_fs_hostfs_write,
     .seek    = __pi_fs_hostfs_seek,
     .mount   = NULL,    // flash-less: the VFS resolves host mount points without a mount step
     .unmount = NULL,

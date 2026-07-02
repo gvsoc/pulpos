@@ -23,8 +23,9 @@ extern "C" {
  */
 
 
-// Open mode flags. Only read is supported by the readfs driver; the hostfs driver also accepts
-// write / append, but the VFS open path currently forces read-only.
+// Open mode flags. The read-only ``readfs`` driver ignores them (files are always readable);
+// the host (semi-hosting) driver honours them: PI_FS_O_WRITE opens for writing (truncate) and
+// PI_FS_O_APPEND opens for appending.
 #define PI_FS_O_READ   0x01
 #define PI_FS_O_WRITE  0x02
 #define PI_FS_O_APPEND 0x04
@@ -73,12 +74,25 @@ void pi_fs_close_async(pi_vfs_t *vfs, pi_fs_file_t *file, pi_fs_evt_t *event);
 /** @brief Read up to ``size`` bytes from the current position; returns the number actually read. */
 ssize_t pi_fs_read(pi_fs_file_t *file, void *ptr, size_t size);
 
+/**
+ * @brief Write up to ``size`` bytes at the current position; returns the number actually written.
+ *
+ * Only file systems backed by a writable medium implement this. The read-only ``readfs`` driver
+ * does not, so a write on a ``readfs`` file returns -1. The host (semi-hosting) driver supports
+ * it: open the file with ``PI_FS_O_WRITE`` (truncate) or ``PI_FS_O_APPEND`` first.
+ */
+ssize_t pi_fs_write(pi_fs_file_t *file, const void *ptr, size_t size);
+
 /** @brief Set the absolute read position. Local-only (no flash IO); returns 0 on success. */
 int pi_fs_seek(pi_fs_file_t *file, size_t offset);
 
 /** @brief Read (async). Status returns the byte count on completion. */
 ALWAYS_INLINE void pi_fs_read_async(pi_fs_file_t *file, void *ptr, size_t size,
                                     pi_fs_evt_t *event);
+
+/** @brief Write (async). Status returns the byte count on completion, -1 if unsupported. */
+ALWAYS_INLINE void pi_fs_write_async(pi_fs_file_t *file, const void *ptr, size_t size,
+                                     pi_fs_evt_t *event);
 
 /** @brief Stat a file. Fills ``entry->size``. Returns 0 on success, -1 if the file is missing. */
 int pi_fs_stat(pi_vfs_t *vfs, const char *path, struct pi_fs_dirent *entry);

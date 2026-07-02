@@ -319,7 +319,7 @@ static void __pi_fs_open_resume(pi_vfs_t *vfs, pi_vfs_mp_fs_t *fs, const char *f
     vfs->current_file->instance = fs->instance;
     pi_evt_cb_init(&vfs->flash_evt.header, __pi_fs_operation_done_evt);
     pi_evt_status_set(&vfs->flash_evt.header, 0);
-    fs->api->open(fs->instance, vfs->current_file, fs_path, 0,
+    fs->api->open(fs->instance, vfs->current_file, fs_path, vfs->current_flags,
                   (pi_fs_evt_t *)&vfs->flash_evt);
 }
 
@@ -327,7 +327,6 @@ static void __pi_fs_open_resume(pi_vfs_t *vfs, pi_vfs_mp_fs_t *fs, const char *f
 void pi_fs_open_async(pi_vfs_t *vfs, pi_fs_file_t *file, const char *file_name,
                       pi_fs_mode_t flags, pi_fs_evt_t *event)
 {
-    (void)flags;
     int irq = pi_irq_lock();
 
     pi_evt_status_set(&event->header, 0);
@@ -345,7 +344,8 @@ void pi_fs_open_async(pi_vfs_t *vfs, pi_fs_file_t *file, const char *file_name,
     }
 
     __pi_fs_add_first(vfs, event);
-    vfs->current_file = file;
+    vfs->current_file  = file;
+    vfs->current_flags = flags;
     pi_evt_status_set(&vfs->flash_evt.header, 0);
     __pi_fs_get_fs(vfs, file_name, __pi_fs_open_resume);
 
@@ -496,6 +496,16 @@ ssize_t pi_fs_read(pi_fs_file_t *file, void *ptr, size_t size)
     pi_fs_evt_t event;
     pi_evt_sig_init(&event.header);
     pi_fs_read_async(file, ptr, size, &event);
+    pi_evt_sig_wait(&event.header);
+    return (ssize_t)pi_evt_status_get(&event.header);
+}
+
+
+ssize_t pi_fs_write(pi_fs_file_t *file, const void *ptr, size_t size)
+{
+    pi_fs_evt_t event;
+    pi_evt_sig_init(&event.header);
+    pi_fs_write_async(file, ptr, size, &event);
     pi_evt_sig_wait(&event.header);
     return (ssize_t)pi_evt_status_get(&event.header);
 }

@@ -83,6 +83,8 @@ struct pi_vfs_mp_fs_api_s
     void  (*close)  (void *fs, pi_fs_file_t *file, pi_fs_evt_t *event);
     void  (*read)   (void *fs, pi_fs_file_t *file, void *dest, size_t nbytes,
                      pi_fs_evt_t *event);
+    void  (*write)  (void *fs, pi_fs_file_t *file, const void *src, size_t nbytes,
+                     pi_fs_evt_t *event);
     void  (*seek)   (void *fs, pi_fs_file_t *file, size_t offset);
     void *(*mount)  (pi_device_t *flash, uint32_t offset, uint32_t size, pi_fs_evt_t *event);
     void  (*unmount)(void *fs);
@@ -106,6 +108,7 @@ struct pi_vfs_s
     // Temporaries for the in-flight operation. Only the active op is mid-flight at any time, so
     // these scalars are safely reused across steps of one state machine.
     uint32_t            current_pt_offset;
+    pi_fs_mode_t        current_flags;
     const char         *current_file_name;
     pi_vfs_mp_t        *current_mp;
     pi_fs_file_t       *current_file;

@@ -23,6 +23,7 @@ size_t strcspn( const char * s1, const char * s2 );
 size_t strspn( const char * s1, const char * s2 );
 
 extern void  *memmove(void *d, const void *s, size_t n);
+int memcmp(const void *m1, const void *m2, size_t n);
 
 extern char  *strcpy(char *d, const char *s);
 extern char *strcat(char *dest, const char *src);
