@@ -17,10 +17,13 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <pmsis/kernel/alloc.h>
+#include PI_CHIP_INC(CONFIG_CHIP_FAMILY_NAME, kernel/memory_map.h)
 
 
 #define BLOCK_SIZE  (4 * 1024)
-#define MAX_BLOCKS  512
+// Cap sized to the actual L2 shared region (+ margin) so the probe finds the
+// true N on any L2 size, not just gap9's.
+#define MAX_BLOCKS  (CHIP_L2_SHARED_SIZE / BLOCK_SIZE + 8)
 
 
 static void *blocks[MAX_BLOCKS];
