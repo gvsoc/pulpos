@@ -68,6 +68,21 @@ def declare_flags(target, container):
         if container.get_parameter('/gui-threads'):
             container.add_define('__GVSOC_GUI__', '1')
 
+        # Stack checker: the kernel declares each stack it runs on (boot stack,
+        # thread stacks, cluster-core stacks) to the simulator through
+        # semihosting (gv_stack_set). The ISS then traps any SP write leaving
+        # the declared range and dumps the stack usage as a trace event, which
+        # the GUI shows as an analog signal. Same declaration scheme as
+        # gui-threads above. Off by default to avoid the semihosting overhead
+        # at boot and on each context switch / cluster fork.
+        if target.get_parameter('/stack-check') is None:
+            BuildParameter(target, 'stack-check', False,
+                'Enable the gvsoc stack checker: the kernel declares each stack (boot, '
+                'threads, cluster cores) to the simulator, which traps SP leaving the '
+                'declared range and dumps stack usage as a trace event.')
+        if container.get_parameter('/stack-check'):
+            container.add_define('CONFIG_STACK_CHECK', '1')
+
     container.add_cflags([
         '-fdata-sections', '-ffunction-sections', '-fno-jump-tables'
     ])

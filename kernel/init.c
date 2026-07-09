@@ -19,6 +19,12 @@
 #include <kernel/link.h>
 #include <kernel/hal.h>
 #include <lib/libc/minimal/libc.h>
+#if defined(CONFIG_STACK_CHECK)
+#include <gvsoc.h>
+// Main stack bounds from the linker script
+extern unsigned char stack_start[];
+extern unsigned char stack[];
+#endif
 
 
 // Function type for constructors / desctructors
@@ -81,6 +87,12 @@ static __attribute__((noinline)) void __pi_init_bss()
 
 void __pi_init_start()
 {
+#if defined(CONFIG_STACK_CHECK)
+    // Declare the main stack so the simulator checks SP stays within it and
+    // reports its usage
+    gv_stack_set(stack_start, stack - stack_start);
+#endif
+
     // BSS init
     __pi_init_bss();
 

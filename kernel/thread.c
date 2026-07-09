@@ -8,9 +8,15 @@
 #include <pmsis/kernel/thread.h>
 #include <kernel/hal.h>
 #if defined(__PLATFORM_GVSOC__)
-#if defined(__GVSOC_GUI__)
+#if defined(__GVSOC_GUI__) || defined(CONFIG_STACK_CHECK)
 #include <gvsoc.h>
 #endif
+#endif
+
+#if defined(CONFIG_STACK_CHECK)
+// Main stack bounds from the linker script
+extern unsigned char stack_start[];
+extern unsigned char stack[];
 #endif
 
 // Queues of ready thread, one per priority.
@@ -140,6 +146,10 @@ static void __pi_thread_init(pi_thread_t *thread, void (*entry)(void *), void *a
     thread->priority = priority;
     thread->event = event;
     thread->status = 0;
+#if defined(CONFIG_STACK_CHECK)
+    thread->stack_base = (uint_t)stack;
+    thread->stack_size = stack_size;
+#endif
 }
 
 // Init thread queue
@@ -169,6 +179,10 @@ void __pi_thread_sched_init()
     // Initialize the main thread so that it is handled like any other thread
     __pi_thread_current = &__pi_thread_main;
     __pi_thread_state_init(&__pi_thread_main);
+#if defined(CONFIG_STACK_CHECK)
+    __pi_thread_main.stack_base = (uint_t)stack_start;
+    __pi_thread_main.stack_size = (uint_t)(stack - stack_start);
+#endif
     __pi_thread_main.ready = 1;
     __pi_thread_main.priority = 0;
     __pi_thread_current_running = 1;
@@ -254,6 +268,14 @@ void __pi_thread_switch_to_next()
 #if defined(__GVSOC_GUI__)
         gv_vcd_dump_trace(__pi_thread_vcd_current, (uint32_t)__pi_thread_current);
 #endif
+#endif
+
+#if defined(CONFIG_STACK_CHECK)
+        // Declare the next thread's stack before switching; the simulator arms
+        // the checks once SP lands inside it (the sp restore in
+        // __pi_thread_switch)
+        gv_stack_set((void *)__pi_thread_current->stack_base,
+            __pi_thread_current->stack_size);
 #endif
 
         // Now do the actual switch

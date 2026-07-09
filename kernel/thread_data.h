@@ -60,6 +60,12 @@ typedef struct pi_thread_s
     // False if threading is waiting for something (e.g. mutex or signal event).
     // This does not prevent him from beeing ready so that it can execute work-items.
     char not_waiting;
+#if defined(CONFIG_STACK_CHECK)
+    // Stack bounds declared to the simulator stack checker at each context
+    // switch to this thread
+    uint_t stack_base;
+    uint_t stack_size;
+#endif
 } pi_thread_t;
 
 extern PI_MEMORY_TINY pi_thread_t *__pi_thread_current;
