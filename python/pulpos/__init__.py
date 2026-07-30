@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import sys
+import subprocess
 import importlib.util
 import logging
 import collections
@@ -153,6 +154,63 @@ class _LinkCommand(gvrun.commands.Command):
         """
         print (f'LD  {self.flags.binary}', flush=True)
         self.execute(self.command, self.path)
+
+
+class _DisasCommand(gvrun.commands.Command):
+    """
+    Command for generating a disassembly (.s) and a size report (.size) of a linked binary.
+
+    Once created, the command is enqueued to the builder in order to be scheduled, and called
+    when one of the workers wants to execute it. It is meant to be triggered by the link command
+    of the binary so that it only runs once the binary is up to date.
+
+    Attributes
+    ----------
+    builder : Builder
+        Builder where commands should be enqueued.
+    toolchain: Toolchain
+        Toolchain used for generating the disassembly and size report
+    binary: str
+        Path of the binary to disassemble
+    """
+    def __init__(self, builder: Builder, toolchain: Toolchain, binary: str):
+        super().__init__(builder)
+
+        self.toolchain = toolchain
+        self.binary = binary
+        # Remember the current path to execute the commands from there in case some
+        # files are using relative path
+        self.path = os.getcwd()
+
+    def __dump(self, cmd: str, out_path: str, mode: str = 'w') -> int:
+        proc = subprocess.run(cmd.split(), cwd=self.path, text=True, capture_output=True)
+        with open(out_path, mode) as out_file:
+            _ = out_file.write(proc.stdout)
+        if proc.stderr:
+            _ = sys.stderr.write(proc.stderr)
+        return proc.returncode
+
+    def run(self):
+        """Execute the disassembly, size and nm commands.
+
+        Should be called by a builder worker then the command is ready to be executed.
+        """
+        print (f'DISAS {self.binary}.s', flush=True)
+        retval = self.__dump(self.toolchain._get_disas_command(self.binary), f'{self.binary}.s')
+
+        print (f'SIZE  {self.binary}.size', flush=True)
+        retval = self.__dump(self.toolchain._get_size_command(self.binary),
+            f'{self.binary}.size', mode='w') or retval
+        retval = self.__dump(self.toolchain._get_nm_command(self.binary),
+            f'{self.binary}.size', mode='a') or retval
+
+        self.retval: int = retval
+        self.command_done()
+        self.builder.command_done(self)
+
+    @override
+    def get_retval(self) -> int:
+        return self.retval
 
 
 @dataclasses.dataclass
@@ -1061,6 +1119,23 @@ class PulposExecutable(SourceContainer, Executable):
                     builder.push_command(command)
             else:
                 builder.push_command(link_command)
+
+    def _dump_asm(self, builder: Builder, builddir: str):
+        """Generate a disassembly (.s) and a size report (.size, objdump/size/nm) for
+        this executable's binary.
+
+        Meant to be called after the compile step, once the binary is up to date.
+        """
+        _ = builddir
+
+        toolchain = self._get_toolchain()
+
+        if toolchain is None:
+            raise RuntimeError(
+                f'{self._get_title(True)} Trying to dump asm without any toolchain attached')
+
+        builder.push_command(_DisasCommand(builder=builder, toolchain=toolchain,
+            binary=self.__binary))
 
 
 def new_executable(name: str, target: SystemTreeNode,

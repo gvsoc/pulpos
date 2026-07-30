@@ -188,6 +188,45 @@ class Toolchain:
 
         return ' '.join(cmd)
 
+    def _get_objdump_tool(self) -> str:
+        """Return the base name of the objdump-like tool for this toolchain family.
+        Must be overriden by the implementation class.
+        """
+        raise NotImplementedError
+
+    def _get_size_tool(self) -> str:
+        """Return the base name of the size tool for this toolchain family.
+        Must be overriden by the implementation class.
+        """
+        raise NotImplementedError
+
+    def _get_nm_tool(self) -> str:
+        """Return the base name of the nm tool for this toolchain family.
+        Must be overriden by the implementation class.
+        """
+        raise NotImplementedError
+
+    def _get_disas_command(self, binary: str) -> str:
+        """Get the command dumping the disassembly (with interleaved source) of the binary.
+        """
+        objdump = self._get_toolchain_command(self._get_objdump_tool())
+
+        return f'{objdump} -d -h -S -t -w --show-raw-insn {binary}'
+
+    def _get_size_command(self, binary: str) -> str:
+        """Get the command dumping the section size summary of the binary.
+        """
+        size = self._get_toolchain_command(self._get_size_tool())
+
+        return f'{size} -B -x --common {binary}'
+
+    def _get_nm_command(self, binary: str) -> str:
+        """Get the command dumping the symbols (sorted by size) of the binary.
+        """
+        nm = self._get_toolchain_command(self._get_nm_tool())
+
+        return f'{nm} -a -A -l -S --size-sort --special-syms {binary}'
+
 
 class _LlvmToolchain(Toolchain):
     """
@@ -238,6 +277,15 @@ class RiscvLlvmToolchain(_LlvmToolchain):
 
         return self._get_link_command_from_ld(ld, flags)
 
+    def _get_objdump_tool(self) -> str:
+        return 'llvm-objdump'
+
+    def _get_size_tool(self) -> str:
+        return 'llvm-size'
+
+    def _get_nm_tool(self) -> str:
+        return 'llvm-nm'
+
 
 class RiscvGccToolchain(_GccToolchain):
     """
@@ -268,3 +316,12 @@ class RiscvGccToolchain(_GccToolchain):
         ld = self._get_toolchain_command('riscv32-unknown-elf-gcc')
 
         return self._get_link_command_from_ld(ld, flags)
+
+    def _get_objdump_tool(self) -> str:
+        return 'riscv32-unknown-elf-objdump'
+
+    def _get_size_tool(self) -> str:
+        return 'riscv32-unknown-elf-size'
+
+    def _get_nm_tool(self) -> str:
+        return 'riscv32-unknown-elf-nm'
