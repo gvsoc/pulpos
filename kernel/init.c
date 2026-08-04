@@ -77,7 +77,11 @@ static __attribute__((noinline)) void __pi_init_bss()
 
     // INIT_INF("BSS init (start: 0x%x, end: 0x%x)\n", bss, bss_end);
 
-    while (bss != bss_end)
+    // Use an ordered comparison so that the compiler cannot rotate the loop
+    // into a do-while by assuming the two section symbols are distinct
+    // objects with different addresses, which would make an empty BSS wrap
+    // around the whole memory.
+    while (bss < bss_end)
     {
         *bss++ = 0;
     }
