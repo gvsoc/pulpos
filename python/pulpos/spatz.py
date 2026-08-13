@@ -82,9 +82,14 @@ class SpatzPulposModule(pulpos.PulposModule):
             f'-march={march}', '-mabi=ilp32d', '-fno-builtin',
             '-fno-vectorize', '-fno-slp-vectorize'
         ])
-        self.add_ldflags([
-            f'-march={march}', '-mabi=ilp32d', '-Wl,-z,norelro'
-        ])
+        # -fuse-ld=lld has to be explicit: the clang driver otherwise falls
+        # back to the host `ld`, which rejects the riscv emulation mode
+        # ("unrecognised emulation mode: elf32lriscv"). Older spatz clang
+        # builds defaulted to lld and hid this.
+        link_flags = [f'-march={march}', '-mabi=ilp32d', '-Wl,-z,norelro']
+        if toolchain == 'llvm':
+            link_flags.append('-fuse-ld=lld')
+        self.add_ldflags(link_flags)
 
         self.add_sources([
             'arch/spatz/kernel/crt0.S',
