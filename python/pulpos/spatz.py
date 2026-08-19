@@ -68,8 +68,19 @@ class SpatzPulposModule(pulpos.PulposModule):
         # into calls to functions the minimal libc does not provide, like
         # memchr. -z norelro prevents lld from complaining about the got
         # section placement.
+        #
+        # -fno-vectorize / -fno-slp-vectorize: `v` is in the march because the
+        # tests issue vector instructions on purpose, but that also lets the
+        # auto-vectorizer rewrite ordinary scalar loops as RVV. It reaches for
+        # instructions the GVSoC model does not decode -- clang 22 turns a
+        # plain `buf[i] = i` into `vsetvli` + `vid.v`, which is not in
+        # isa_rvv_timed.py (nor is the rest of the VMUNARY0 family) -- and the
+        # illegal instruction traps into the bootrom's park loop, so the test
+        # hangs with no output at all. Explicit vector code is unaffected;
+        # only the compiler's own vectorization is turned off.
         self.add_cflags([
-            f'-march={march}', '-mabi=ilp32d', '-fno-builtin'
+            f'-march={march}', '-mabi=ilp32d', '-fno-builtin',
+            '-fno-vectorize', '-fno-slp-vectorize'
         ])
         self.add_ldflags([
             f'-march={march}', '-mabi=ilp32d', '-Wl,-z,norelro'
