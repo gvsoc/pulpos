@@ -15,6 +15,31 @@ MEMORY
 
 SECTIONS
 {
+  /* .text first: the RTL testbench boots the cores at the start of the
+     region rather than at the ELF entry, so the entry must land there. */
+  .text :
+  {
+    . = ALIGN(16);
+    _stext = .;
+    *(.text)
+    *(.text.*)
+    *(.gnu.linkonce.t.*)
+    *(.text_static)
+    *(.text_static.*)
+    _etext  =  .;
+    *(.lit)
+    *(.shdata)
+    __cluster_text_start = .;
+    *(.cluster.text)
+    *(.cluster.text.*)
+    /* This alignment is needed on RTL platforms to avoid getting X in the code */
+    . = ALIGN(16);
+    _endtext = .;
+    __cluster_text_end = .;
+    /* This alignment is needed on RTL platforms to avoid getting X in the code */
+    . = ALIGN(16);
+  } > mem
+
   .init :
   {
     . = ALIGN(8);
@@ -181,27 +206,5 @@ SECTIONS
     . = ALIGN(8);
   } > mem
 
-  .text :
-  {
-    . = ALIGN(16);
-    _stext = .;
-    *(.text)
-    *(.text.*)
-    *(.gnu.linkonce.t.*)
-    *(.text_static)
-    *(.text_static.*)
-    _etext  =  .;
-    *(.lit)
-    *(.shdata)
-    __cluster_text_start = .;
-    *(.cluster.text)
-    *(.cluster.text.*)
-    /* This alignment is needed on RTL platforms to avoid getting X in the code */
-    . = ALIGN(16);
-    _endtext = .;
-    __cluster_text_end = .;
-    /* This alignment is needed on RTL platforms to avoid getting X in the code */
-    . = ALIGN(16);
-  } > mem
 
 }

@@ -13,6 +13,18 @@ from gvrun.parameter import BuildParameter
 from pulpos.toolchain import RiscvGccToolchain, RiscvLlvmToolchain, ToolchainConfig
 
 
+# Per-hart stack. Shared by the linker script (which reserves one slot per
+# core) and crt0.S (which indexes into them by mhartid), so it has to be a
+# single source of truth.
+_STACK_SIZE = 0x800
+
+# The march a test adds to its own cflags when it issues vector instructions
+# from C. The default march has no 'v' (see SpatzPulposModule), and the last
+# -march on the command line wins, so `test.add_cflags(f'-march={MARCH_VECTOR}')`
+# is the opt-in -- the same mechanism spatz-rtl's components use.
+MARCH_VECTOR = 'rv32imafdv_zfh_xdma'
+
+
 class SpatzPulposModule(pulpos.PulposModule):
 
     def __init__(self, target: gvrun.target.SystemTreeNode, container: pulpos.SourceContainer,
@@ -34,6 +46,25 @@ class SpatzPulposModule(pulpos.PulposModule):
         self.add_define('CONFIG_CLUSTER_TCDM_SIZE', f'0x{int(cluster.tcdm.area.size):x}')
         self.add_define('CONFIG_CLUSTER_PERIPH_BASE', f'0x{int(cluster.peripheral.base):x}')
         self.add_define('CONFIG_CLUSTER_NB_CORE', f'{int(cluster.nb_core)}')
+        self.add_define('CONFIG_STACK_SIZE', hex(_STACK_SIZE))
+        # crt0 indexes the per-hart stacks with a shift rather than a multiply:
+        # Snitch has no scalar multiplier (integer mul is offloaded to Spatz),
+        # so a `mul` in the startup path hangs on hardware.
+        self.add_define('CONFIG_STACK_SIZE_LOG2', str(_STACK_SIZE.bit_length() - 1))
+
+        # Run the program on every cluster core, like snRuntime: hart 0 does
+        # the runtime init, the others take their own stack and join it on the
+        # cluster hardware barrier before entering main (crt0.S). OFF by
+        # default: two cores fetching through the shared L1 icache trip an
+        # assertion in the model's refill adapter
+        # (io_v2_single_req_to_beat_adapter.cpp, "downstream round-tripped our
+        # read request as a beat"), so the GVSoC targets abort. Turn it on once
+        # that is fixed -- the RTL side is fine.
+        multicore = BuildParameter(self, 'multicore', False,
+            'Run the program on every cluster core instead of parking the '
+            'secondary harts.').value
+        if multicore:
+            self.add_define('CONFIG_SPATZ_MULTICORE', '1')
         self.add_define('CONFIG_SPATZ_NB_LANES', f'{int(cluster.spatz_nb_lanes)}')
 
         BuildParameter(self, 'linker_script',  "link.ld", 'Linker script')
@@ -57,11 +88,26 @@ class SpatzPulposModule(pulpos.PulposModule):
 
         self.add_define('__RV32__', '1')
 
-        # The RTL spatz cluster does not support the compressed extension,
-        # march can be overriden to rv32imafdv when compiling for it.
-        # The gcc toolchain is too old to support the vector extension, only
-        # scalar code can be compiled with it.
-        default_march = 'rv32imafdcv' if toolchain == 'llvm' else 'rv32imafdc'
+        # ISA selection, mirroring sw/cmake/toolchain-llvm.cmake in spatz-rtl.
+        #
+        # 'v' is deliberately ABSENT from the default march. Spatz does not
+        # implement every RVV instruction, and LLVM 22's backend reaches for
+        # RVV in lowerings no vectorizer flag controls -- store merging, or
+        # building a 64-bit value from two words via vslide1down, which is
+        # what a plain `tohost != 0` in htif.c compiled to. It ends in
+        # vcpop.m, outside the subset the RTL implements, and the core traps.
+        # Without 'v' the compiler cannot emit vector code at all.
+        #
+        # 'c' is absent for a different reason: the RTL cluster has no
+        # compressed extension, so a binary built with it traps on the first
+        # c.* instruction on hardware (GVSoC tolerates it, which is what hid
+        # this). Leaving it out means one binary runs on both.
+        #
+        # Tests whose C files contain hand-written vector inline asm opt back
+        # in by adding -march=<vector> to their own cflags: the last -march on
+        # the command line wins. `march` overrides the default outright.
+        default_march = ('rv32imafd_zfh_xdma' if toolchain == 'llvm'
+                         else 'rv32imafd')
         march = BuildParameter(self, 'march', default_march, 'RISCV march used for compiling').value
 
         # -fno-builtin prevents the compiler from turning libc code patterns
@@ -78,10 +124,29 @@ class SpatzPulposModule(pulpos.PulposModule):
         # illegal instruction traps into the bootrom's park loop, so the test
         # hangs with no output at all. Explicit vector code is unaffected;
         # only the compiler's own vectorization is turned off.
-        self.add_cflags([
-            f'-march={march}', '-mabi=ilp32d', '-fno-builtin',
-            '-fno-vectorize', '-fno-slp-vectorize'
-        ])
+        cflags = [f'-march={march}', '-mabi=ilp32d', '-fno-builtin']
+        if toolchain == 'llvm':
+            cflags += [
+                # The compiler must never use FP/vector registers the code did
+                # not ask for: LLVM 22 otherwise expands memcpy/memset inline
+                # with RVV, clobbering the vector state hand-written kernels
+                # set up around it. Load-bearing for anything that opts back
+                # into the vector march.
+                '-mno-implicit-float',
+                # Belt and braces on top of the v-less march, same set as
+                # spatz-rtl's toolchain file: keep the vectorizers off and
+                # stop the DAG combiner / VectorCombine forming vector code
+                # out of scalar sources.
+                '-fno-vectorize', '-fno-slp-vectorize',
+                '-mllvm', '-scalable-vectorization=off',
+                '-mllvm', '-combiner-store-merging=false',
+                '-mllvm', '-disable-vector-combine',
+            ]
+        self.add_cflags(cflags)
+
+        # The march a test adds to its own cflags when it issues vector
+        # instructions from C (see the note above).
+        self.add_define('CONFIG_SPATZ_MARCH_VECTOR', MARCH_VECTOR)
         # -fuse-ld=lld has to be explicit: the clang driver otherwise falls
         # back to the host `ld`, which rejects the riscv emulation mode
         # ("unrecognised emulation mode: elf32lriscv"). Older spatz clang

@@ -13,6 +13,17 @@
 
 void __pi_init_soc()
 {
+#ifdef CONFIG_SPATZ_MULTICORE
+    // Counterpart of the barrier the secondary harts wait on in crt0.S:
+    // hart 0 joins it here, at the end of the runtime initialization the
+    // generic init flow drives (BSS, libc, constructors all done), which
+    // releases the secondaries into main. The cluster hardware barrier
+    // releases when every core has issued the load. Living in this port
+    // hook keeps the generic kernel/init.c free of any multi-hart code.
+    volatile uint32_t *barrier =
+        (volatile uint32_t *)(CONFIG_CLUSTER_PERIPH_BASE + 0x40);
+    (void)*barrier;
+#endif
 }
 
 int __pi_libc_fputc_safe(int c, FILE *stream)
