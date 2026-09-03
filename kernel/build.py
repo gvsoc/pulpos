@@ -46,7 +46,7 @@ with builder.if_(kernel_sw.get_ref('alloc')):
 
 with builder.if_(kernel_sw.get_ref('fs')):
     os_src.with_define('CONFIG_KERNEL_FS', 1)
-    os_src.add('fs/fs.c', 'fs/readfs.c')
+    os_src.add('fs/fs.c', 'fs/readfs.c', 'fs/hostfs.c')
 
 set_os_src(os_src)
 

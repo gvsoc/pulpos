@@ -14,4 +14,7 @@ def declare(target):
         parameters=[('pulpos/kernel.threading', True)])
 
     test.set_optimization_level('-Os -g')
+    # The OS is compiled at -O3 (its default in the make flow) so both flows
+    # measure the same kernel and share one set of bench references.
+    test.pulpos.set_optimization_level('-O3 -g')
     test.add_sources('test.c')

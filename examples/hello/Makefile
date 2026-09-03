@@ -1,18 +1,10 @@
-WORK_DIR ?= work
-USE_GVRUN = 1
+# SPDX-FileCopyrightText: 2026 ETH Zurich, University of Bologna and EssilorLuxottica SAS
+#
+# SPDX-License-Identifier: Apache-2.0
 
-clean:
-	make -C ../../../../.. TARGETS=test MODULES=$(CURDIR) clean
+include $(PULPOS_HOME)/rules/pulpos_config.mk
 
-build:
-	make -C ../../../../.. TARGETS=test MODULES=$(CURDIR) build
+APP       = hello
+APP_SRCS += test.c
 
-all: build
-
-run: $(WORK_DIR)
-	gvsoc --target-dir=$(CURDIR) --target=test --build-dir=$(WORK_DIR) build run $(runner_args)
-
-$(WORK_DIR):
-	mkdir -p $(WORK_DIR)
-
-.PHONY: build
+include $(PULPOS_HOME)/rules/pulpos.mk
