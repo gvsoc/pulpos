@@ -25,7 +25,13 @@
  * save/restore, and main's short counter check between WFIs.
  */
 
+// Each iteration costs two 1 ms slices; the RTL simulation gets a handful so
+// that the bench fits in its wall-clock budget.
+#if defined(CONFIG_PLATFORM_RTL)
+#define NB_ITER 3
+#else
 #define NB_ITER 200
+#endif
 
 static volatile int running;
 

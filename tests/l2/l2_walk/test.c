@@ -21,6 +21,18 @@
 
 #define NB_ITER 8
 
+// Largest buffers probed; the RTL simulation walks much smaller ones so that
+// the test fits in its wall-clock budget.
+#if defined(CONFIG_PLATFORM_RTL)
+#define SHARED_START (8 * 1024)
+#define SHARED_MIN   (4 * 1024)
+#define PRIV_START   (4 * 1024)
+#else
+#define SHARED_START (2 * 1024 * 1024)
+#define SHARED_MIN   (64 * 1024)
+#define PRIV_START   (64 * 1024)
+#endif
+
 
 static size_t probe_max_alloc(enum pi_mem_allocator alloc, size_t start, size_t shrink_step,
                               size_t min_size, void **out_buf)
@@ -84,9 +96,9 @@ int main(void)
     // L2 SHARED — probe largest contiguous block, sweep it.
     void *shared_buf = NULL;
     size_t shared_size = probe_max_alloc(PI_MEM_ALLOCATOR_L2_SHARED,
-                                         /*start=*/2 * 1024 * 1024,
+                                         /*start=*/SHARED_START,
                                          /*shrink_step=*/4 * 1024,
-                                         /*min_size=*/64 * 1024,
+                                         /*min_size=*/SHARED_MIN,
                                          &shared_buf);
     if (!shared_buf)
     {
@@ -100,7 +112,7 @@ int main(void)
     // L2 PRIV — same probe + sweep on the default heap.
     void *priv_buf = NULL;
     size_t priv_size = probe_max_alloc(PI_MEM_ALLOCATOR_DEFAULT,
-                                       /*start=*/64 * 1024,
+                                       /*start=*/PRIV_START,
                                        /*shrink_step=*/4 * 1024,
                                        /*min_size=*/4 * 1024,
                                        &priv_buf);

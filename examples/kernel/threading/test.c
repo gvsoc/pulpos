@@ -10,6 +10,14 @@
 
 #define STACK_SIZE 2048
 
+// The busy loop sizes the run; the RTL simulation gets a much shorter one so
+// that the test fits in its wall-clock budget.
+#if defined(CONFIG_PLATFORM_RTL)
+#define BUSY_LOOP_ITER 2000
+#else
+#define BUSY_LOOP_ITER 1000000
+#endif
+
 static uint8_t stack0[STACK_SIZE];
 static uint8_t stack1[STACK_SIZE];
 
@@ -19,7 +27,7 @@ static void thread0_entry(void *arg)
     {
         printf("Thread 0 executing\n");
 
-        for (volatile int j=0; j<1000000; j++);
+        for (volatile int j=0; j<BUSY_LOOP_ITER; j++);
     }
 }
 
@@ -29,7 +37,7 @@ static void thread1_entry(void *arg)
     {
         printf("Thread 1 executing\n");
 
-        for (volatile int j=0; j<1000000; j++);
+        for (volatile int j=0; j<BUSY_LOOP_ITER; j++);
     }
 }
 

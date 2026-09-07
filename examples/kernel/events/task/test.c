@@ -9,9 +9,19 @@
 #include <pmsis/kernel/event.h>
 #include <pmsis/kernel/time.h>
 
+// The delayed-event period/count and the busy loops size the run; the RTL
+// simulation gets shorter ones so that the test fits in its wall-clock budget.
+#if defined(CONFIG_PLATFORM_RTL)
+#define PERIOD0 1000
+#define NB_DELAYS 10
+#define BUSY_LOOP_ITER 2000
+#else
 #define PERIOD0 10000
+#define NB_DELAYS 50
+#define BUSY_LOOP_ITER 1000000
+#endif
 
-static int count0 = 50;
+static int count0 = NB_DELAYS;
 static pi_evt_t end_event;
 
 static void delay_handler(pi_evt_t *event)
@@ -34,7 +44,7 @@ static void task0_handler(pi_evt_t *event)
     {
         printf("Task 0 executing\n");
 
-        for (volatile int j=0; j<1000000; j++);
+        for (volatile int j=0; j<BUSY_LOOP_ITER; j++);
     }
 }
 
@@ -44,7 +54,7 @@ static void task1_handler(pi_evt_t *event)
     {
         printf("Task 1 executing\n");
 
-        for (volatile int j=0; j<1000000; j++);
+        for (volatile int j=0; j<BUSY_LOOP_ITER; j++);
     }
 }
 
