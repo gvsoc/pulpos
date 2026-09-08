@@ -153,7 +153,10 @@ SECTIONS
     . = ALIGN(8);
     . = ALIGN(16);
     stack_start = .;
-    . = . + 0x800;
+    /* One CONFIG_STACK_SIZE slot per hart that runs (crt0 hands hart N the
+     * Nth slot below `stack`): a single slot unless the multicore option is
+     * on. */
+    . = . + @stack_size@;
     stack = .;
     . = ALIGN(8);
   } > mem

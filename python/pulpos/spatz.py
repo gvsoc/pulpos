@@ -55,16 +55,19 @@ class SpatzPulposModule(pulpos.PulposModule):
         # Run the program on every cluster core, like snRuntime: hart 0 does
         # the runtime init, the others take their own stack and join it on the
         # cluster hardware barrier before entering main (crt0.S). OFF by
-        # default: two cores fetching through the shared L1 icache trip an
-        # assertion in the model's refill adapter
-        # (io_v2_single_req_to_beat_adapter.cpp, "downstream round-tripped our
-        # read request as a beat"), so the GVSoC targets abort. Turn it on once
-        # that is fixed -- the RTL side is fine.
+        # default: main() must dispatch on mhartid, and only hart 0 reports
+        # the exit status. (The abort the GVSoC targets used to hit with this
+        # option was the secondary hart's stack growing down into .data: the
+        # linker script reserved a single stack slot. It reserves one per
+        # running hart now, see stack_size below.)
         multicore = BuildParameter(self, 'multicore', False,
             'Run the program on every cluster core instead of parking the '
             'secondary harts.').value
         if multicore:
             self.add_define('CONFIG_SPATZ_MULTICORE', '1')
+        # The linker script reserves one stack slot per running hart; with a
+        # single slot the secondary harts' stacks would grow down into .data.
+        nb_stacks = int(cluster.nb_core) if multicore else 1
         self.add_define('CONFIG_SPATZ_NB_LANES', f'{int(cluster.spatz_nb_lanes)}')
 
         BuildParameter(self, 'linker_script',  "link.ld", 'Linker script')
@@ -79,6 +82,7 @@ class SpatzPulposModule(pulpos.PulposModule):
             # the VLSU ports are directly connected to it.
             linker_script.add_parameter('mem_start', f'0x{int(soc.hbm.base):x}')
             linker_script.add_parameter('mem_size', '0x01000000')
+            linker_script.add_parameter('stack_size', hex(_STACK_SIZE * nb_stacks))
 
             self.add_ldflags([
                 f'-T{linker_script.get_path()}'
