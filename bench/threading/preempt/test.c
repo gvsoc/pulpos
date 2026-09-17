@@ -25,12 +25,15 @@
  * save/restore, and main's short counter check between WFIs.
  */
 
-// Each iteration costs two 1 ms slices; the RTL simulation gets a handful so
-// that the bench fits in its wall-clock budget.
+// Each iteration costs two 1 ms slices of simulated time, and the RTL platform
+// pays about 7.5 s of VCS per simulated ms, so it gets two round-trips in a
+// single pass instead of three passes of three.
 #if defined(CONFIG_PLATFORM_RTL)
-#define NB_ITER 3
+#define NB_ITER 2
+#define NB_PASS 1
 #else
 #define NB_ITER 200
+#define NB_PASS 3
 #endif
 
 static volatile int running;
@@ -56,7 +59,7 @@ int main()
 
     pi_perf_enable((1 << PI_PERF_ACTIVE_CYCLES) | (1 << PI_PERF_INSTR));
 
-    for (int j = 0; j < 3; j++)
+    for (int j = 0; j < NB_PASS; j++)
     {
         running = 1;
 

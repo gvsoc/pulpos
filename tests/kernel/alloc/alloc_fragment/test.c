@@ -20,7 +20,16 @@
 #include PI_CHIP_INC(CONFIG_CHIP_FAMILY_NAME, kernel/memory_map.h)
 
 
+// Block size the heap is carved into. The frees walk the free list, so the run
+// is quadratic in the number of blocks: with 4 KB blocks the el1 L2 shared heap
+// holds 988 of them, which the RTL platform spends minutes simulating. Bigger
+// blocks there give the same checkerboard with ~60 of them; nothing in the test
+// depends on the block size.
+#if defined(CONFIG_PLATFORM_RTL)
+#define BLOCK_SIZE  (64 * 1024)
+#else
 #define BLOCK_SIZE  (4 * 1024)
+#endif
 // Cap sized to the actual L2 shared region (+ margin) so the probe finds the
 // true N on any L2 size, not just gap9's.
 #define MAX_BLOCKS  (CHIP_L2_SHARED_SIZE / BLOCK_SIZE + 8)

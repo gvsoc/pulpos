@@ -9,8 +9,17 @@
 #include <pmsis/kernel/event.h>
 #include <pmsis/kernel/time.h>
 
+// The two periods size the run, and on the RTL platform the simulated idle
+// time is what costs (about 7.5 s of VCS per simulated ms), so they are scaled
+// down by ten there. The counts and the 5:1 ratio are kept, so the second
+// handler still fires between the first one's.
+#if defined(CONFIG_PLATFORM_RTL)
+#define PERIOD0 100
+#define PERIOD1 500
+#else
 #define PERIOD0 1000
 #define PERIOD1 5000
+#endif
 
 static int count0 = 20;
 static int count1 = 4;

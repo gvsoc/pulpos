@@ -11,7 +11,19 @@
 #include <pmsis/kernel/irq.h>
 #include <arch/gap/gap9/kernel/perf.h>
 
+// The list-operation benchmarks below are O(list length) per iteration and the
+// firing ones spend NB * delay of simulated time, both of which the RTL
+// platform pays for heavily (about 7.5 s of VCS per simulated ms). It gets
+// shorter lists and a single measured pass; the reported per-iteration figures
+// are then of a 20-deep list, so they are not comparable with the other
+// platforms' 100-deep ones.
+#if defined(CONFIG_PLATFORM_RTL)
+#define NB_ITER 20
+#define NB_PASS 1
+#else
 #define NB_ITER 100
+#define NB_PASS 3
+#endif
 #define DELAY_US 1000000
 
 static pi_evt_t events[NB_ITER];
@@ -33,7 +45,7 @@ static void bench_push_single()
     pi_perf_enable((1 << PI_PERF_ACTIVE_CYCLES) | (1 << PI_PERF_INSTR));
     pi_cycle_start();
 
-    for (int j = 0; j < 3; j++)
+    for (int j = 0; j < NB_PASS; j++)
     {
         pi_cycle_reset();
         pi_perf_reset();
@@ -73,7 +85,7 @@ static void bench_push()
     pi_perf_enable((1 << PI_PERF_ACTIVE_CYCLES) | (1 << PI_PERF_INSTR));
     pi_cycle_start();
 
-    for (int j = 0; j < 3; j++)
+    for (int j = 0; j < NB_PASS; j++)
     {
         pi_cycle_reset();
         pi_perf_reset();
@@ -115,7 +127,7 @@ static void bench_cancel_ordered()
     pi_perf_enable((1 << PI_PERF_ACTIVE_CYCLES) | (1 << PI_PERF_INSTR));
     pi_cycle_start();
 
-    for (int j = 0; j < 3; j++)
+    for (int j = 0; j < NB_PASS; j++)
     {
         // Schedule all events outside the measurement
         for (int i = 0; i < NB_ITER; i++)
@@ -158,7 +170,7 @@ static void bench_cancel_reverse()
     pi_perf_enable((1 << PI_PERF_ACTIVE_CYCLES) | (1 << PI_PERF_INSTR));
     pi_cycle_start();
 
-    for (int j = 0; j < 3; j++)
+    for (int j = 0; j < NB_PASS; j++)
     {
         // Schedule all events outside the measurement
         for (int i = 0; i < NB_ITER; i++)
@@ -197,7 +209,11 @@ static void bench_cancel_reverse()
  * The core sleeps between fires, so active_cycles isolates the overhead.
  */
 
+#if defined(CONFIG_PLATFORM_RTL)
+#define FIRE_NB_ITER 20
+#else
 #define FIRE_NB_ITER 200
+#endif
 #define FIRE_DELAY_US 10
 
 static pi_evt_t fire_end_event;
@@ -223,7 +239,7 @@ static void bench_fire()
 
     int irq_state = pi_irq_lock();
 
-    for (int j = 0; j < 3; j++)
+    for (int j = 0; j < NB_PASS; j++)
     {
         pi_cycle_reset();
         pi_perf_reset();
@@ -256,7 +272,11 @@ static void bench_fire()
  * Active cycles measure the CPU overhead; total cycles include the sleep.
  */
 
+#if defined(CONFIG_PLATFORM_RTL)
+#define WAIT_NB_ITER 20
+#else
 #define WAIT_NB_ITER 200
+#endif
 #define WAIT_DELAY_US 10
 
 static void bench_signal_wait()
@@ -268,7 +288,7 @@ static void bench_signal_wait()
     pi_perf_enable((1 << PI_PERF_ACTIVE_CYCLES) | (1 << PI_PERF_INSTR));
     pi_cycle_start();
 
-    for (int j = 0; j < 3; j++)
+    for (int j = 0; j < NB_PASS; j++)
     {
         pi_cycle_reset();
         pi_perf_reset();
