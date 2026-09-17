@@ -14,14 +14,20 @@
 
 // The delayed-event period/count and the busy loops size the run; the RTL
 // simulation gets shorter ones so that the test fits in its wall-clock budget.
+// There, what costs is the CPU work the RTL has to simulate, mostly the busy
+// loops (90% of the instructions with 2000 iterations and 1 ms delays, 8 min in
+// CI); the delays shrink with them so that the tasks still overlap the delayed
+// events.
 #if defined(CONFIG_PLATFORM_RTL)
-#define PERIOD0 1000
+#define PERIOD0 100
 #define NB_DELAYS 10
-#define BUSY_LOOP_ITER 2000
+#define BUSY_LOOP_ITER 500
+#define THREAD_WAIT_US 100
 #else
 #define PERIOD0 10000
 #define NB_DELAYS 50
 #define BUSY_LOOP_ITER 1000000
+#define THREAD_WAIT_US 1000
 #endif
 
 static uint8_t stack0[STACK_SIZE];
@@ -35,7 +41,7 @@ static void thread0_entry(void *arg)
 {
     while(!end)
     {
-        pi_time_wait_us(1000);
+        pi_time_wait_us(THREAD_WAIT_US);
     }
 }
 
@@ -43,7 +49,7 @@ static void thread1_entry(void *arg)
 {
     while(!end)
     {
-        pi_time_wait_us(1000);
+        pi_time_wait_us(THREAD_WAIT_US);
     }
 }
 
