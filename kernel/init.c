@@ -89,12 +89,35 @@ static __attribute__((noinline)) void __pi_init_bss()
 
 
 
+#ifdef CONFIG_INIT_DATA_COPY
+static __attribute__((noinline)) void __pi_init_data()
+{
+    unsigned int *src = &_data_load;
+    unsigned int *dst = &_sdata;
+    unsigned int *end = &_edata;
+
+    // Ordered comparison, for the same reason as in __pi_init_bss.
+    while (dst < end)
+    {
+        *dst++ = *src++;
+    }
+}
+#endif
+
+
+
 void __pi_init_start()
 {
 #if defined(CONFIG_STACK_CHECK)
     // Declare the main stack so the simulator checks SP stays within it and
     // reports its usage
     gv_stack_set(stack_start, stack - stack_start);
+#endif
+
+#ifdef CONFIG_INIT_DATA_COPY
+    // .data is linked to run from a memory the loader does not write: copy
+    // its load image in before anything reads a global.
+    __pi_init_data();
 #endif
 
     // BSS init

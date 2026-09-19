@@ -25,3 +25,11 @@ static inline uintptr_t __pi_init_bss_end()
 {
     return (uintptr_t)&_bss_end;
 }
+
+#ifdef CONFIG_INIT_DATA_COPY
+// Chips whose .data runs from a memory the loader cannot write (VMA != LMA)
+// provide these: the load image address and the run address range of .data.
+extern unsigned int _data_load;
+extern unsigned int _sdata;
+extern unsigned int _edata;
+#endif
