@@ -81,3 +81,66 @@ static inline void pi_softhier_eoc(uint32_t status)
 {
     *(volatile uint32_t *)SOFTHIER_SOC_REG_EOC_ALL = status;
 }
+
+// iDMA of the cluster, driven by the Xdma instructions of the last core of
+// the cluster (the one bound to the iDMA): the other cores must not call
+// these. Addresses are the ones seen by the cluster (local or remote TCDM).
+// The instructions are encoded by hand, the compiler does not know Xdma.
+
+#define SOFTHIER_XDMA_ENCODE(funct7, rs2, rs1, rd) \
+    (((funct7) << 25) | ((rs2) << 20) | ((rs1) << 15) | ((rd) << 7) | 0b0101011)
+
+static inline int pi_softhier_is_dma_core()
+{
+    return pi_softhier_core_id() == CONFIG_SOFTHIER_NB_CORE_PER_CLUSTER - 1;
+}
+
+// Start a 1D transfer of `size` bytes, returns the transfer ID
+static inline uint32_t pi_softhier_dma_1d(uintptr_t dst, uintptr_t src, uint32_t size)
+{
+    register uint32_t a0 __asm__("a0") = dst;
+    register uint32_t a1 __asm__("a1") = 0;
+    register uint32_t a2 __asm__("a2") = src;
+    register uint32_t a3 __asm__("a3") = 0;
+    register uint32_t a4 __asm__("a4") = size;
+
+    // dmsrc a2, a3 / dmdst a0, a1 / dmcpyi a0, a4, 0
+    __asm__ volatile(".word %0" :: "i"(SOFTHIER_XDMA_ENCODE(0, 13, 12, 0)), "r"(a2), "r"(a3));
+    __asm__ volatile(".word %0" :: "i"(SOFTHIER_XDMA_ENCODE(1, 11, 10, 0)), "r"(a0), "r"(a1));
+    __asm__ volatile(".word %1" : "=r"(a0) : "i"(SOFTHIER_XDMA_ENCODE(2, 0, 14, 10)), "r"(a4)
+        : "memory");
+    return a0;
+}
+
+// Start a 2D transfer of `repeat` rows of `size` bytes, returns the transfer
+// ID
+static inline uint32_t pi_softhier_dma_2d(uintptr_t dst, uintptr_t src, uint32_t size,
+    uint32_t dst_stride, uint32_t src_stride, uint32_t repeat)
+{
+    register uint32_t a0 __asm__("a0") = dst;
+    register uint32_t a1 __asm__("a1") = 0;
+    register uint32_t a2 __asm__("a2") = src;
+    register uint32_t a3 __asm__("a3") = 0;
+    register uint32_t a4 __asm__("a4") = size;
+    register uint32_t a5 __asm__("a5") = dst_stride;
+    register uint32_t a6 __asm__("a6") = src_stride;
+    register uint32_t a7 __asm__("a7") = repeat;
+
+    // dmsrc a2, a3 / dmdst a0, a1 / dmstr a6, a5 / dmrep a7 / dmcpyi a0, a4, 2
+    __asm__ volatile(".word %0" :: "i"(SOFTHIER_XDMA_ENCODE(0, 13, 12, 0)), "r"(a2), "r"(a3));
+    __asm__ volatile(".word %0" :: "i"(SOFTHIER_XDMA_ENCODE(1, 11, 10, 0)), "r"(a0), "r"(a1));
+    __asm__ volatile(".word %0" :: "i"(SOFTHIER_XDMA_ENCODE(6, 15, 16, 0)), "r"(a6), "r"(a5));
+    __asm__ volatile(".word %0" :: "i"(SOFTHIER_XDMA_ENCODE(7, 0, 17, 0)), "r"(a7));
+    __asm__ volatile(".word %1" : "=r"(a0) : "i"(SOFTHIER_XDMA_ENCODE(2, 2, 14, 10)), "r"(a4)
+        : "memory");
+    return a0;
+}
+
+// Wait until the iDMA has no transfer left
+static inline void pi_softhier_dma_wait_all()
+{
+    // dmstati t0, 2 (busy status)
+    __asm__ volatile(
+        "1: .word %0\n"
+        "bnez t0, 1b" :: "i"(SOFTHIER_XDMA_ENCODE(4, 2, 0, 5)) : "t0", "memory");
+}
