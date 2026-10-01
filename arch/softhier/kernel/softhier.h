@@ -75,8 +75,8 @@ static inline void pi_softhier_cluster_barrier()
 void pi_softhier_global_barrier();
 
 // Report the end of computation of this core with its status. The
-// simulation stops once every core of every cluster reported, with the OR of
-// the statuses as exit status.
+// simulation stops once every core of every cluster reported. The exit status
+// is the OR of the statuses on SoftHier v2, and always 0 on SoftHier v1.
 static inline void pi_softhier_eoc(uint32_t status)
 {
     *(volatile uint32_t *)SOFTHIER_SOC_REG_EOC_ALL = status;

@@ -15,8 +15,9 @@ The same binary runs on every cluster, from the instruction memory of the
 cluster where it is loaded: core 0 of each cluster runs the runtime and
 main, the other cores sleep unless the multicore option is on. Output goes
 through the character register of each cluster, and the simulation stops
-once every core reported its end of computation, with the OR of the
-statuses as exit status. See arch/softhier/kernel/softhier.h for the
+once every core reported its end of computation. The exit status is the OR
+of the statuses on SoftHier v2, and always 0 on SoftHier v1: tests running on
+both must be checked on their output. See arch/softhier/kernel/softhier.h for the
 hardware helpers (position, remote TCDM, barriers).
 """
 

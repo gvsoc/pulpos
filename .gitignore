@@ -9,3 +9,5 @@ power_report.csv
 trace_file.txt
 *.vcd
 *.fst
+# Topology files SoftHier v1 writes in the current directory
+softhier_topologies/
