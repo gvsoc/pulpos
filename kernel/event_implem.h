@@ -9,6 +9,8 @@
 #include <string.h>
 #include <pmsis/kernel/irq.h>
 #include <kernel/thread_data.h>
+#include <kernel/core_data.h>
+#include <pmsis/kernel/fc_core.h>
 
 // This is a kind of stub used to force the core to exits its sleep loop. This is force
 // in the MEPC csr during an interrupt handler to make it jump there, check work-items
@@ -23,6 +25,19 @@ void __pi_evt_handle_signal(pi_evt_t *arg);
 void __pi_evt_push_task(pi_evt_t *event);
 // Init scheduler, should be called during runtime init
 void __pi_evt_sched_init();
+// Forward the notification of an event to another core
+void __pi_evt_notify_forward(pi_evt_t *event, int core);
+#if CONFIG_KERNEL_NB_CORES > 1
+// Index of the calling core
+extern PI_CORE_LOCAL int __pi_fc_core_self;
+#endif
+
+// Notify an event of the calling core
+ALWAYS_INLINE void __pi_evt_notify_local(pi_evt_t *event)
+{
+    event->next = __pi_evt_ready_first;
+    __pi_evt_ready_first = event;
+}
 
 ALWAYS_INLINE void pi_evt_sig_wait(pi_evt_t *event)
 {
@@ -41,9 +56,22 @@ ALWAYS_INLINE void pi_evt_sig_wait_unsafe(pi_evt_t *event)
 
 ALWAYS_INLINE void __attribute__((always_inline)) pi_evt_notify_unsafe(pi_evt_t *event)
 {
-    event->next = __pi_evt_ready_first;
-    __pi_evt_ready_first = event;
+    __pi_evt_notify_local(event);
 }
+
+#if CONFIG_KERNEL_NB_CORES > 1
+ALWAYS_INLINE void pi_evt_notify_remote_unsafe(pi_evt_t *event, int core)
+{
+    __pi_evt_notify_forward(event, core);
+}
+
+ALWAYS_INLINE void pi_evt_notify_remote(pi_evt_t *event, int core)
+{
+    int irq = pi_irq_lock();
+    pi_evt_notify_remote_unsafe(event, core);
+    pi_irq_unlock(irq);
+}
+#endif
 
 ALWAYS_INLINE void __attribute__((always_inline)) pi_evt_notify(pi_evt_t *event)
 {

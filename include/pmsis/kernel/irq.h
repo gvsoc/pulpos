@@ -61,6 +61,9 @@ static inline void pi_irq_disable(int irq);
  * @brief Set interrupt routine.
  *
  * This function sets the interrupt handler called when an interrupt occurs.
+ * On a chip with several cores running the kernel, the handlers are shared: the
+ * handler of an interrupt line is the same for all the cores, and each core gets
+ * the interrupts it enables with pi_irq_enable() on its own interrupt controller.
  *
  * @param irq            Interrupt number.
  * @param handler        Handler to execute.

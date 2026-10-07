@@ -7,6 +7,7 @@
 #pragma once
 
 #include <pmsis/kernel/irq.h>
+#include <kernel/core_data.h>
 
 #if defined(CONFIG_MEMCHECK) && defined(__PLATFORM_GVSOC__)
 #include <gvsoc.h>
@@ -45,11 +46,23 @@ void *__pi_mem_alloc(pi_alloc_t *a, size_t size);
 
 
 
-static inline void *pi_mem_alloc(enum pi_mem_allocator allocator, size_t size)
+// Allocate and free with interrupts disabled, and the kernel lock taken if kernel_lock is set.
+// The allocators are shared by the cores running the kernel, which take the kernel lock. Other
+// cores, like the cluster ones, cannot take spinlocks: they only use the allocator of their own
+// memory (pi_cl_l1_malloc), without it.
+static inline void *__pi_mem_alloc_locked(enum pi_mem_allocator allocator, size_t size,
+    int kernel_lock)
 {
-    int irq = pi_irq_lock();
+    int irq = kernel_lock ? __pi_kernel_lock_irq() : pi_irq_lock();
     void *chunk = __pi_mem_alloc(&__pi_mem_alloc_instances[allocator], size);
-    pi_irq_unlock(irq);
+    if (kernel_lock)
+    {
+        __pi_kernel_unlock_irq(irq);
+    }
+    else
+    {
+        pi_irq_unlock(irq);
+    }
 #if defined(CONFIG_MEMCHECK) && defined(__PLATFORM_GVSOC__)
     if (chunk != NULL)
     {
@@ -63,7 +76,8 @@ static inline void *pi_mem_alloc(enum pi_mem_allocator allocator, size_t size)
 }
 
 
-static inline void pi_mem_free(enum pi_mem_allocator allocator, void *data, size_t size)
+static inline void __pi_mem_free_locked(enum pi_mem_allocator allocator, void *data, size_t size,
+    int kernel_lock)
 {
 #if defined(CONFIG_MEMCHECK) && defined(__PLATFORM_GVSOC__)
     // Unregisters the buffer and returns the pointer with its buffer ID stripped,
@@ -72,17 +86,36 @@ static inline void pi_mem_free(enum pi_mem_allocator allocator, void *data, size
     data = gv_memcheck_mem_free(
         __pi_mem_alloc_instances[allocator].memcheck_mem_id, data, size);
 #endif
-    int irq = pi_irq_lock();
+    int irq = kernel_lock ? __pi_kernel_lock_irq() : pi_irq_lock();
     __pi_mem_free(&__pi_mem_alloc_instances[allocator], data, size);
-    pi_irq_unlock(irq);
+    if (kernel_lock)
+    {
+        __pi_kernel_unlock_irq(irq);
+    }
+    else
+    {
+        pi_irq_unlock(irq);
+    }
+}
+
+
+static inline void *pi_mem_alloc(enum pi_mem_allocator allocator, size_t size)
+{
+    return __pi_mem_alloc_locked(allocator, size, 1);
+}
+
+
+static inline void pi_mem_free(enum pi_mem_allocator allocator, void *data, size_t size)
+{
+    __pi_mem_free_locked(allocator, data, size, 1);
 }
 
 
 static inline void *pi_mem_alloc_align(enum pi_mem_allocator allocator, size_t size, size_t align)
 {
-    int irq = pi_irq_lock();
+    int irq = __pi_kernel_lock_irq();
     void *chunk = __pi_mem_alloc_align(&__pi_mem_alloc_instances[allocator], size, align);
-    pi_irq_unlock(irq);
+    __pi_kernel_unlock_irq(irq);
 #if defined(CONFIG_MEMCHECK) && defined(__PLATFORM_GVSOC__)
     if (chunk != NULL)
     {

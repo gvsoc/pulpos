@@ -12,8 +12,16 @@
 #include <pmsis/kernel/memory.h>
 #include <kernel/riscv.h>
 
+#ifndef CONFIG_KERNEL_NB_CORES
+#define CONFIG_KERNEL_NB_CORES 1
+#endif
+
 typedef struct pi_thread_s pi_thread_t;
 typedef struct pi_evt_s pi_evt_t;
+
+// First event callback ready to be executed. This is processed by IRQ handlers to execute
+// pending event callbacks. Per-core.
+extern PI_CORE_LOCAL pi_evt_t *__pi_evt_ready_first;
 
 typedef struct pi_evt_s
 {
@@ -38,10 +46,6 @@ typedef struct pi_evt_s
     uint_t time;
 }
 pi_evt_t;
-
-// First event callback ready to be executed. This is processed by IRQ handlers to execute
-// pending event callbacks
-extern PI_MEMORY_TINY pi_evt_t *__pi_evt_ready_first;
 
 #endif
 

@@ -8,6 +8,10 @@
 
 #include <string.h>
 #include <pmsis/kernel/builtins.h>
+#include <kernel/thread_data.h>
+#include <kernel/core_data.h>
+
+extern PI_CORE_LOCAL char __pi_thread_resched;
 
 // Initialize the thread scheduler. Must be called by the global os init
 void __pi_thread_sched_init();
@@ -32,8 +36,6 @@ void __pi_thread_switch_to_next();
 // Thread start stub used to unlock interrupts before executing thread entry point
 void __pi_thread_start();
 
-extern PI_MEMORY_TINY char __pi_thread_resched;
-
 // Check if the a new thread must be scheduled. If so, it will only flag a reschedule, which will
 // happen later when leaving the interrupt handler.
 // Only have effect if preemption is enabled
@@ -57,7 +59,7 @@ static inline __attribute__((always_inline)) void __pi_thread_current_unblock(pi
     // The wfi loop is just looping without checking anything. Since we arrived here from an
     // interrupt handler, we just need to modify the saved PC (MEPC) and return.
     __pi_thread_current_running = 1;
-        asm volatile ("csrw %0, %1" :  : "I" (0x341), "r" (__pi_thread_sleep_wakeup) );
+    asm volatile ("csrw %0, %1" :  : "I" (0x341), "r" (__pi_thread_sleep_wakeup) );
 }
 
 static inline __attribute__((always_inline)) void __pi_thread_enqueue_ready_check(pi_thread_t *thread)

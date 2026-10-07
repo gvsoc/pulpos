@@ -8,6 +8,7 @@
 
 #include "thread_data.h"
 #include "event_data.h"
+#include "core_data.h"
 
     .global __pi_thread_sleep
     .type   __pi_thread_sleep, @function
@@ -17,8 +18,28 @@ __pi_thread_sleep:
     sw      s0, 0(sp)
     sw      s1, 8(sp)
     sw      ra, 4(sp)
-    lw      s1, %tiny(__pi_thread_current)(x0)
-    j       __pi_thread_sleep_start
+    lw      s1, PI_CORE_LOCAL_ACCESS(__pi_thread_current)
+
+    // The current thread may have notified events before leaving, like the one of a thread
+    // exiting. Execute their callbacks now, as they may make another thread ready, which
+    // would otherwise wait for the next interrupt.
+__pi_thread_sleep_callbacks:
+    lw      a0, PI_CORE_LOCAL_ACCESS(__pi_evt_ready_first)
+    beqz    a0, __pi_thread_sleep_no_callbacks
+
+    la      ra, __pi_thread_sleep_callbacks
+    lw      t5, PI_EVT_T_NEXT(a0)
+    lw      t6, PI_EVT_T_CALLBACK(a0)
+    sw      t5, PI_CORE_LOCAL_ACCESS(__pi_evt_ready_first)
+
+    jr      t6
+
+__pi_thread_sleep_no_callbacks:
+    // Switch to a thread which became ready, otherwise sleep
+    lw      t3, PI_CORE_LOCAL_ACCESS(__pi_thread_ready)
+    beqz    t3, __pi_thread_sleep_start
+    jal     ra, __pi_thread_switch_to_next
+    j       __pi_thread_handle_work_items
 
     .size   __pi_thread_sleep, . - __pi_thread_sleep
 
@@ -50,13 +71,13 @@ __pi_evt_sig_wait:
     // Execute work-items
 __pi_thread_handle_work_items:
     // Execute first all pending event callbacks
-    lw      a0, %tiny(__pi_evt_ready_first)(x0)
+    lw      a0, PI_CORE_LOCAL_ACCESS(__pi_evt_ready_first)
     beqz    a0, __pi_thread_handle_work_items_no_callbacks
 
     la     ra, __pi_thread_handle_work_items
     lw     t5, PI_EVT_T_NEXT(a0)
     lw     t6, PI_EVT_T_CALLBACK(a0)
-    sw     t5, %tiny(__pi_evt_ready_first)(x0)
+    sw     t5, PI_CORE_LOCAL_ACCESS(__pi_evt_ready_first)
 
     jr     t6
 
@@ -72,12 +93,12 @@ __pi_thread_handle_work_items_no_callbacks:
     bnez    t3, __pi_evt_sig_wait_end
 
     // Make sure we won't be scheduled again since we don't have any work-item anymore
-    // No need to update __pi_thread_ready since we were not in the queue as we are the current
+    // No need to update the ready mask since we were not in the queue as we are the current
     // thread
     sb      x0, PI_THREAD_T_READY(s1)
 
     // If there is any thready ready, switch to it instead of going to sleep
-    lw      t3, %tiny(__pi_thread_ready)(x0)
+    lw      t3, PI_CORE_LOCAL_ACCESS(__pi_thread_ready)
     bnez    t3, __pi_evt_sig_wait_switch_thread
 
 
@@ -86,7 +107,7 @@ __pi_thread_handle_work_items_no_callbacks:
     // Now go to sleep
 __pi_thread_sleep_start:
     // Mark the current thread as not running anymore
-    sw      x0, %tiny(__pi_thread_current_running)(x0)
+    sw      x0, PI_CORE_LOCAL_ACCESS(__pi_thread_current_running)
 
     // Switch to fast handlers
     la      t3, __pi_fast_irq_vector_base

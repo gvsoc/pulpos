@@ -11,6 +11,7 @@
 
 #include <kernel/thread_data.h>
 #include <kernel/event_data.h>
+#include <kernel/core_data.h>
 
 #if 0
 #define LP_START_0  ( 0x7C0 )
@@ -86,9 +87,9 @@ __pi_irq_handler_callbacks_check:
     // Not clear why we should switch to a different thread before handling event callbacks since
     // they are not associated to any thread.
     // To be checked when the thread test is integrated
-    lb     t2, %tiny(__pi_thread_resched)(x0)
-    lb     t3, %tiny(__pi_thread_force_resched)(x0)
-    lw     a0, %tiny(__pi_evt_ready_first)(x0)
+    lb     t2, PI_CORE_LOCAL_ACCESS(__pi_thread_resched)
+    lb     t3, PI_CORE_LOCAL_ACCESS(__pi_thread_force_resched)
+    lw     a0, PI_CORE_LOCAL_ACCESS(__pi_evt_ready_first)
     bnez   t2, __pi_irq_resched_check
     bnez   t3, __pi_irq_resched_do
     beqz   a0, __pi_irq_restore
@@ -96,7 +97,7 @@ __pi_irq_handler_callbacks_check:
 __pi_irq_handle_callbacks:
     lw     t5, PI_EVT_T_NEXT(a0)
     lw     t6, PI_EVT_T_CALLBACK(a0)
-    sw     t5, %tiny(__pi_evt_ready_first)(x0)
+    sw     t5, PI_CORE_LOCAL_ACCESS(__pi_evt_ready_first)
 
     // After the callback execution, we need to check again callbacks and thread switch
     // ra still point there, no need to set it.
@@ -144,10 +145,10 @@ __pi_irq_restore:
     // This gets called when we need to check if another thread should be scheduled
 __pi_irq_resched_check:
     // Get sched info about ready threads and current thread
-    lw    t3, %tiny(__pi_thread_ready)(x0)
-    lw    t2, %tiny(__pi_thread_current)(x0)
+    lw    t3, PI_CORE_LOCAL_ACCESS(__pi_thread_ready)
+    lw    t2, PI_CORE_LOCAL_ACCESS(__pi_thread_current)
     // Allow another reschedule check for next time
-    sb    x0, %tiny(__pi_thread_resched)(x0)
+    sb    x0, PI_CORE_LOCAL_ACCESS(__pi_thread_resched)
     // Nothing to do if there is no ready thread
     beqz  t3, __pi_irq_resched_check_end
     // Otherwise compare with current thread
@@ -164,7 +165,7 @@ __pi_irq_resched_check_end:
     // This gets called to force a schedule to next thread
 __pi_irq_resched_do:
     // Allow the force for tnext next
-    sb   x0, %tiny(__pi_thread_force_resched)(x0)
+    sb   x0, PI_CORE_LOCAL_ACCESS(__pi_thread_force_resched)
     j    __pi_thread_switch_to_next
 
     .size   __pi_irq_handler_stub, . - __pi_irq_handler_stub
@@ -198,9 +199,9 @@ __pi_irq_fast_handle_callbacks_check:
 // Not clear why we should switch to a different thread before handling event callbacks since
 // they are not associated to any thread.
 // To be checked when the thread test is integrated
-    lb     t2, %tiny(__pi_thread_resched)(x0)
-    lb     t3, %tiny(__pi_thread_force_resched)(x0)
-    lw     a0, %tiny(__pi_evt_ready_first)(x0)
+    lb     t2, PI_CORE_LOCAL_ACCESS(__pi_thread_resched)
+    lb     t3, PI_CORE_LOCAL_ACCESS(__pi_thread_force_resched)
+    lw     a0, PI_CORE_LOCAL_ACCESS(__pi_evt_ready_first)
     bnez   t2, __pi_irq_resched_check
     bnez   t3, __pi_irq_resched_do
     beqz   a0, __pi_irq_fast_handler_stub_end
@@ -208,7 +209,7 @@ __pi_irq_fast_handle_callbacks_check:
 __pi_irq_fast_handle_callbacks:
     lw     t5, PI_EVT_T_NEXT(a0)
     lw     t6, PI_EVT_T_CALLBACK(a0)
-    sw     t5, %tiny(__pi_evt_ready_first)(x0)
+    sw     t5, PI_CORE_LOCAL_ACCESS(__pi_evt_ready_first)
 
     // After the callback execution, we need to check again callbacks and thread switch
     // ra still point there, no need to set it.

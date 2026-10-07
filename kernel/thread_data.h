@@ -68,10 +68,11 @@ typedef struct pi_thread_s
 #endif
 } pi_thread_t;
 
-extern PI_MEMORY_TINY pi_thread_t *__pi_thread_current;
-extern PI_MEMORY_TINY int __pi_thread_current_running;
-extern PI_MEMORY_TINY uint_t __pi_thread_ready;
-extern PI_MEMORY_TINY pi_thread_t __pi_thread_main;
+// Per-core scheduler state (see kernel/thread.c)
+extern PI_CORE_LOCAL pi_thread_t *__pi_thread_current;
+extern PI_CORE_LOCAL int __pi_thread_current_running;
+extern PI_CORE_LOCAL uint_t __pi_thread_ready;
+extern PI_CORE_LOCAL pi_thread_t __pi_thread_main;
 
 #endif
 

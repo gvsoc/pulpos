@@ -19,6 +19,7 @@
 #include <kernel/link.h>
 #include <kernel/hal.h>
 #include <lib/libc/minimal/libc.h>
+#include <kernel/core_data.h>
 #if defined(CONFIG_STACK_CHECK)
 #include <gvsoc.h>
 // Main stack bounds from the linker script
@@ -26,6 +27,13 @@ extern unsigned char stack_start[];
 extern unsigned char stack[];
 #endif
 
+
+#if CONFIG_KERNEL_NB_CORES > 1
+// Not tiny: a spinlock is taken through the test-and-set alias of its real address
+pi_spinlock_t __pi_kernel_lock;
+
+void __pi_fc_core_kernel_init();
+#endif
 
 // Function type for constructors / desctructors
 typedef void (*__ctor_dtor_ptr_t)(void);
@@ -135,6 +143,11 @@ void __pi_init_start()
 
 #ifdef CONFIG_IRQ
     __pi_irq_init();
+#endif
+
+#if CONFIG_KERNEL_NB_CORES > 1
+    // Notifications from the other cores
+    __pi_fc_core_kernel_init();
 #endif
 
 #ifdef CONFIG_THREAD

@@ -91,7 +91,8 @@ ALWAYS_INLINE pi_evt_t *pi_evt_task_init(pi_evt_t *event, void (*callback)(pi_ev
  * @brief Notify the completion of an event.
  *
  * This function triggers the notification of the event that was provided when the event was
- * initialized.
+ * initialized. It is handled by the calling core: on chips with several cores running the kernel,
+ * pi_evt_notify_remote() notifies it on another core, the one whose thread waits for it.
  *
  * In the case of a signal event, it flags it as completed and unblocks any thread waiting on it. If
  * any thread then tries to wait for it by calling pi_evt_sig_wait(), it will immediately
@@ -124,6 +125,30 @@ ALWAYS_INLINE void pi_evt_notify(pi_evt_t *event);
  * or from an interrupt handler). Calling it from an unsafe context may lead to race conditions.
  */
 ALWAYS_INLINE void pi_evt_notify_unsafe(pi_evt_t *event);
+
+/**
+ * @brief Notify the completion of an event on another core.
+ *
+ * An event is handled by a core running the kernel: it executes its callback or wakes up the
+ * thread waiting for it. pi_evt_notify() handles it on the calling core. This variant handles it
+ * on another core, the one whose thread waits for the event for example: the event is forwarded
+ * to it, and it gets an interrupt to notify it. The core must not be the calling one. Only on
+ * chips with several cores running the kernel.
+ *
+ * @param event Pointer to the event.
+ * @param core  Index of the core handling the event (see pi_fc_core_id()), not the calling one.
+ */
+ALWAYS_INLINE void pi_evt_notify_remote(pi_evt_t *event, int core);
+
+/**
+ * @brief Notify the completion of an event on another core, without internal locking.
+ *
+ * This behaves exactly as pi_evt_notify_remote() but must be called with interrupts disabled.
+ *
+ * @param event Pointer to the event.
+ * @param core  Index of the core handling the event.
+ */
+ALWAYS_INLINE void pi_evt_notify_remote_unsafe(pi_evt_t *event, int core);
 
 /**
  * @brief Wait for the completion of a signal event.

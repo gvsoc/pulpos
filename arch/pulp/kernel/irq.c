@@ -9,7 +9,11 @@
 #include <pmsis/kernel/irq.h>
 #include <kernel/riscv.h>
 #include <kernel/hal.h>
+#include <kernel/core_data.h>
 
+// Interrupt handlers and their argument, indexed by interrupt number. With several cores running
+// the kernel, they share them: each core gets the interrupts it enables on its own interrupt
+// controller, and an interrupt line has the same handler on all of them.
 PI_MEMORY_TINY uint_t __pi_irq_handlers[32];
 PI_MEMORY_TINY uint_t __pi_irq_handlers_arg[32];
 

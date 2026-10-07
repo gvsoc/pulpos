@@ -7,7 +7,7 @@
 #include <pmsis/kernel/event.h>
 #include <kernel/thread_implem.h>
 
-PI_MEMORY_TINY pi_evt_t *__pi_evt_ready_first;
+PI_CORE_LOCAL pi_evt_t *__pi_evt_ready_first;
 
 // This gets called when a polling event gets notified to flag it and unblock any waiting thread.
 void __pi_evt_handle_signal(pi_evt_t *event)

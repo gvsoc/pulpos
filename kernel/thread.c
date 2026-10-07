@@ -19,31 +19,33 @@ extern unsigned char stack_start[];
 extern unsigned char stack[];
 #endif
 
+// Scheduler state, one instance per core (PI_CORE_LOCAL).
 // Queues of ready thread, one per priority.
-PI_MEMORY_TINY pi_thread_queue_t __pi_thread_ready_queues[PI_THREAD_MAX_PRIORITIES];
+PI_CORE_LOCAL pi_thread_queue_t __pi_thread_ready_queues[PI_THREAD_MAX_PRIORITIES];
 // Mask giving the queues containing at least one ready thread. One bit per queue.
-PI_MEMORY_TINY uint_t __pi_thread_ready;
+PI_CORE_LOCAL uint_t __pi_thread_ready;
 // Current thread which has been the last to execute. It can either be currently running or
 // blocked if no other thread can be scheduled
-PI_MEMORY_TINY pi_thread_t *__pi_thread_current;
+PI_CORE_LOCAL pi_thread_t *__pi_thread_current;
 // Tell if the current thread is running or not, as it could be the current but not running if
 // no other thread can be scheduled
-PI_MEMORY_TINY int __pi_thread_current_running;
+PI_CORE_LOCAL int __pi_thread_current_running;
 // Set to 1 when we should check if a higher priority thread should be scheduled when leaving
 // interrupt handler
-PI_MEMORY_TINY char __pi_thread_resched;
+PI_CORE_LOCAL char __pi_thread_resched;
 // Set to 1 when we should force the scheduler to schedule a new thread when leaving the
 // interrupt handler. This is used to end the current thread slice
-PI_MEMORY_TINY char __pi_thread_force_resched;
-// Thread storage for main thread
-PI_MEMORY_TINY pi_thread_t __pi_thread_main;
+PI_CORE_LOCAL char __pi_thread_force_resched;
+// Thread storage for the thread the core starts with (main on the first core)
+PI_CORE_LOCAL pi_thread_t __pi_thread_main;
 
 #if defined(__PLATFORM_GVSOC__)
 #if defined(__GVSOC_GUI__)
-// Store the VCD trace used to send to the profiler information about thread lifecycle
-PI_MEMORY_TINY int __pi_thread_vcd_lifecycle;
+// Store the VCD trace used to send to the profiler information about thread lifecycle. Each core
+// model has its own traces, so these are per-core.
+PI_CORE_LOCAL int __pi_thread_vcd_lifecycle;
 // Store the VCD trace used to tell the profiler the current thread
-PI_MEMORY_TINY int __pi_thread_vcd_current;
+PI_CORE_LOCAL int __pi_thread_vcd_current;
 #endif
 #endif
 
@@ -160,31 +162,35 @@ static void __pi_thread_queue_init(pi_thread_queue_t *queue)
 
 void __pi_thread_sched_init()
 {
+    pi_thread_t *main_thread = &__pi_thread_main;
+
     for (int i=0; i<PI_THREAD_MAX_PRIORITIES; i++)
     {
         __pi_thread_queue_init(&__pi_thread_ready_queues[i]);
     }
+    __pi_thread_ready = 0;
 
 #if defined(__PLATFORM_GVSOC__)
 #if defined(__GVSOC_GUI__)
+    // The traces of the calling core: the simulator resolves their names relative to it
     __pi_thread_vcd_lifecycle = gv_vcd_open_trace("thread_lifecycle");
     __pi_thread_vcd_current = gv_vcd_open_trace("thread_current");
 
     // Set main thread tid
     gv_vcd_dump_trace(__pi_thread_vcd_lifecycle, 4);
-    gv_vcd_dump_trace(__pi_thread_vcd_lifecycle, (uint32_t)&__pi_thread_main);
+    gv_vcd_dump_trace(__pi_thread_vcd_lifecycle, (uint32_t)main_thread);
 #endif
 #endif
 
     // Initialize the main thread so that it is handled like any other thread
-    __pi_thread_current = &__pi_thread_main;
-    __pi_thread_state_init(&__pi_thread_main);
+    __pi_thread_current = main_thread;
+    __pi_thread_state_init(main_thread);
 #if defined(CONFIG_STACK_CHECK)
-    __pi_thread_main.stack_base = (uint_t)stack_start;
-    __pi_thread_main.stack_size = (uint_t)(stack - stack_start);
+    main_thread->stack_base = (uint_t)stack_start;
+    main_thread->stack_size = (uint_t)(stack - stack_start);
 #endif
-    __pi_thread_main.ready = 1;
-    __pi_thread_main.priority = 0;
+    main_thread->ready = 1;
+    main_thread->priority = 0;
     __pi_thread_current_running = 1;
     __pi_thread_resched = 0;
     __pi_thread_force_resched = 0;
@@ -239,10 +245,11 @@ void __pi_thread_enqueue_ready(pi_thread_t *thread)
 void __pi_thread_switch_to_next()
 {
     pi_thread_t *current = __pi_thread_current;
-    __pi_thread_current = __pi_thread_dequeue_ready();
+    pi_thread_t *next = __pi_thread_dequeue_ready();
+    __pi_thread_current = next;
 
     // Only switch if next thread is different
-    if (__pi_thread_current != current)
+    if (next != current)
     {
         // Current thread may still be ready, in which case it needs to be in the ready queue
         if (current->ready)
@@ -266,7 +273,7 @@ void __pi_thread_switch_to_next()
 
 #if defined(__PLATFORM_GVSOC__)
 #if defined(__GVSOC_GUI__)
-        gv_vcd_dump_trace(__pi_thread_vcd_current, (uint32_t)__pi_thread_current);
+        gv_vcd_dump_trace(__pi_thread_vcd_current, (uint32_t)next);
 #endif
 #endif
 
@@ -274,12 +281,11 @@ void __pi_thread_switch_to_next()
         // Declare the next thread's stack before switching; the simulator arms
         // the checks once SP lands inside it (the sp restore in
         // __pi_thread_switch)
-        gv_stack_set((void *)__pi_thread_current->stack_base,
-            __pi_thread_current->stack_size);
+        gv_stack_set((void *)next->stack_base, next->stack_size);
 #endif
 
         // Now do the actual switch
-        __pi_thread_switch(current, __pi_thread_current);
+        __pi_thread_switch(current, next);
     }
 }
 
