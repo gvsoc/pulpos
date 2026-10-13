@@ -6,6 +6,9 @@ MEMORY
   /* 0x8000 are reserved at the end of the mem for the boot rom */
   mem           : ORIGIN = @mem_start@, LENGTH = @mem_size@
   mem_aliased   : ORIGIN = 0x00000008, LENGTH = 0x00003ff8
+  /* Cluster L1 TCDM (see CLUSTER_L1_* in arch/pulp/drivers/cluster_implem.h).
+     Used as the VMA region for .l1_data, whose load image lives in L2. */
+  l1            : ORIGIN = 0x10000000, LENGTH = 0x00010000
 }
 
 SECTIONS
@@ -206,5 +209,19 @@ SECTIONS
     /* This alignment is needed on RTL platforms to avoid getting X in the code */
     . = ALIGN(16);
   } > mem
+
+
+  /* Initialized globals placed in cluster L1 TCDM (macro PI_CL_L1_GLOBAL). L1
+     is not preloaded, so the init image is embedded in L2 (AT> mem) and copied
+     L2 -> L1 on every pi_cluster_open (see arch/pulp/drivers/cluster.c). */
+  .l1_data : {
+    . = ALIGN(8);
+    __cluster_l1_data_start = .;
+    *(.l1_data)
+    *(.l1_data.*)
+    . = ALIGN(8);
+    __cluster_l1_data_end = .;
+  } > l1 AT> mem
+  __cluster_l1_data_load = LOADADDR(.l1_data);
 
 }

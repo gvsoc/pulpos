@@ -26,6 +26,18 @@ class PulpOpenPulposModule(PulposModule):
         self.add_define('CONFIG_CHIP_FAMILY_NAME', 'pulp')
         self.add_define('CONFIG_CHIP_PULP_OPEN', '1')
 
+        # The RTL testbench has no semihosting: printf and exit go through the
+        # stdout window and the core status register it watches instead (see
+        # arch/pulp/kernel/hal.h). GVSoC models both, so this can be checked there.
+        io = BuildParameter(self, 'io',
+            'stdout' if target.get_parameter('/platform') == 'rtl' else 'semihost',
+            'How printf and exit reach the platform: semihost (semihosting) or stdout (stdout '
+            'window and APB SoC core status register, as the RTL testbench)').value
+        if io == 'stdout':
+            self.add_define('CONFIG_IO_STDOUT', '1')
+        elif io != 'semihost':
+            raise RuntimeError(f'Unknown pulpos/io value: {io}')
+
         attr = cast(PulpOpenAttr, target.get_attributes())
 
         _ = BuildParameter(self, 'linker_script',  "link.ld", 'Linker script')
@@ -57,11 +69,15 @@ class PulpOpenPulposModule(PulposModule):
 
         self.add_define('CONFIG_IRQ_INC', '<arch/pulp/kernel/irq.h>')
         self.add_define('CONFIG_MEMORY_INC', '<arch/pulp/kernel/memory.h>')
+        self.add_define('CONFIG_BOARD_INC', 'pmsis/chips/pulp/bsp/pulp_open.h')
 
         self.add_sources([
             'arch/pulp/kernel/hal.c',
             'arch/pulp/kernel/irq.c',
             'arch/pulp/kernel/irq_asm.S',
+            'arch/pulp/drivers/cluster.c',
+            'arch/pulp/drivers/cluster_entry.S',
+            'arch/pulp/bsp/pulp_open.c',
         ])
 
         self.add_subdirectory(path, target)
