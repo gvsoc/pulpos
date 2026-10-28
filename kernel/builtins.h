@@ -9,6 +9,35 @@
 #if !defined(CONFIG_ISA_PULPV2)
 #include "builtins_emulation.h"
 
+#if defined(CONFIG_CORE_CV32E40P)
+/* CORE-V bit manipulation instructions (xcvbitmanip) for the CV32E40P,
+ * instead of the C versions, which call libgcc for clz. The range operand
+ * is ((size-1) << 5) | off as for the PULP ones. Extraction and insertion
+ * stay in C: CORE-V GCC (20240530) folds them wrongly on constant ranges. */
+#undef __FF1
+#undef __FL1
+#undef __BITSET
+#undef __BITSET_R
+#undef __BITSET_R_SAFE
+#undef __BITCLR
+#undef __BITCLR_R
+#undef __BITCLR_R_SAFE
+
+static inline unsigned int __attribute__ ((always_inline)) __ExtInsMaskFast(unsigned int Size, unsigned int Offset) { return ((((Size-1))<<5)|(Offset)); }
+static inline unsigned int __attribute__ ((always_inline)) __ExtInsMaskSafe(unsigned int Size, unsigned int Offset) { return ((((Size-1)&0x1F)<<5)|(Offset&0x1F)); }
+
+#define __FF1(x)                        __builtin_riscv_cv_bitmanip_ff1((x))
+#define __FL1(x)                        __builtin_riscv_cv_bitmanip_fl1((x))
+
+#define __BITSET(x, size, off)          __builtin_riscv_cv_bitmanip_bset((x), __ExtInsMaskFast((size), (off)))
+#define __BITSET_R(x, size, off)        __builtin_riscv_cv_bitmanip_bset((x), __ExtInsMaskFast((size), (off)))
+#define __BITSET_R_SAFE(x, size, off)   __builtin_riscv_cv_bitmanip_bset((x), __ExtInsMaskSafe((size), (off)))
+
+#define __BITCLR(x, size, off)          __builtin_riscv_cv_bitmanip_bclr((x), __ExtInsMaskFast((size), (off)))
+#define __BITCLR_R(x, size, off)        __builtin_riscv_cv_bitmanip_bclr((x), __ExtInsMaskFast((size), (off)))
+#define __BITCLR_R_SAFE(x, size, off)   __builtin_riscv_cv_bitmanip_bclr((x), __ExtInsMaskSafe((size), (off)))
+#endif
+
 #else
 
 /* ARITHMETIC SECTION */
