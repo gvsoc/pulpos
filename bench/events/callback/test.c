@@ -20,6 +20,12 @@
 
 #define BENCH_0_NB_ITER 100
 
+// Software interrupt used by the benchmarks, which no hardware raises. 1 by
+// default (0 is for exceptions), the chip can give another one.
+#ifndef PI_IRQ_SW_FREE
+#define PI_IRQ_SW_FREE 1
+#endif
+
 static void bench_0_irq_handler(void *arg) {
     pi_evt_t *evt = (pi_evt_t *)arg;
     pi_evt_notify_unsafe(evt);
@@ -38,9 +44,8 @@ static void bench_0_cb_while_active() {
     pi_cycle_start();
     pi_perf_start();
 
-    // Register our callback on IRQ 1 as IRQ 0 is for exceptions
-    pi_irq_handler_set(1, bench_0_irq_handler, (void *)&event);
-    pi_irq_enable(1);
+    pi_irq_handler_set(PI_IRQ_SW_FREE, bench_0_irq_handler, (void *)&event);
+    pi_irq_enable(PI_IRQ_SW_FREE);
 
     for (int j=0; j<3; j++) {
         pi_cycle_reset();
@@ -50,7 +55,7 @@ static void bench_0_cb_while_active() {
             // Register the callback at each iteration to also benchmark the cost of initializing
             // the callback
             pi_evt_cb_init(&event, bench_0_evt_callback);
-            pi_irq_set(1);
+            pi_irq_set(PI_IRQ_SW_FREE);
         }
     }
 
@@ -87,7 +92,7 @@ static void bench_1_evt_callback(pi_evt_t *evt) {
         pi_evt_notify(&bench_1_end_event);
     } else {
         pi_evt_cb_init(evt, bench_1_evt_callback);
-        pi_irq_set(1);
+        pi_irq_set(PI_IRQ_SW_FREE);
     }
 }
 
@@ -101,8 +106,8 @@ static void bench_1_cb_while_idle() {
     pi_cycle_start();
     pi_perf_start();
 
-    pi_irq_handler_set(1, bench_1_irq_handler, (void *)&event);
-    pi_irq_enable(1);
+    pi_irq_handler_set(PI_IRQ_SW_FREE, bench_1_irq_handler, (void *)&event);
+    pi_irq_enable(PI_IRQ_SW_FREE);
     int irq_state = pi_irq_lock();
 
     for (int j=0; j<3; j++) {
@@ -113,7 +118,7 @@ static void bench_1_cb_while_idle() {
         bench_1_iter = BENCH_1_NB_ITER;
         pi_evt_sig_init(&bench_1_end_event);
         pi_evt_cb_init(&event, bench_1_evt_callback);
-        pi_irq_set(1);
+        pi_irq_set(PI_IRQ_SW_FREE);
         pi_evt_sig_wait(&bench_1_end_event);
     }
 

@@ -298,14 +298,16 @@ class RiscvGccToolchain(_GccToolchain):
     config (ToolchainConfig): Flags to configure toolchain behavior
     """
 
-    def __init__(self, config: ToolchainConfig):
+    def __init__(self, config: ToolchainConfig, prefix: str='riscv32-unknown-elf-'):
         super().__init__(config)
+        # Prefix of the tool names, e.g. riscv32-corev-elf- for CORE-V GCC
+        self.prefix = prefix
 
     def _get_compile_command(self, flags:ToolchainCFlags) -> str:
         """Get the compile command.
         The toolchain will determine the compile command from specified flags.
         """
-        cc = self._get_toolchain_command('riscv32-unknown-elf-gcc')
+        cc = self._get_toolchain_command(f'{self.prefix}gcc')
 
         return self._get_compile_command_from_cc(cc, flags)
 
@@ -313,15 +315,15 @@ class RiscvGccToolchain(_GccToolchain):
         """Get the link command.
         The toolchain will determine the link command from specified flags.
         """
-        ld = self._get_toolchain_command('riscv32-unknown-elf-gcc')
+        ld = self._get_toolchain_command(f'{self.prefix}gcc')
 
         return self._get_link_command_from_ld(ld, flags)
 
     def _get_objdump_tool(self) -> str:
-        return 'riscv32-unknown-elf-objdump'
+        return f'{self.prefix}objdump'
 
     def _get_size_tool(self) -> str:
-        return 'riscv32-unknown-elf-size'
+        return f'{self.prefix}size'
 
     def _get_nm_tool(self) -> str:
-        return 'riscv32-unknown-elf-nm'
+        return f'{self.prefix}nm'

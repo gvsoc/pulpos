@@ -268,8 +268,9 @@ void __pi_thread_switch_to_next()
         __pi_thread_current_running = 1;
 
         // We might have entered irq handler from fast mode. Since we're breaking
-        // control flow, we need to switch back to normal mode.
-        asm volatile ("csrw %0, %1" :  : "I" (CSR_MTVEC), "r" (__pi_linker_irq_vector_base()) );
+        // control flow, we need to switch back to normal mode. Vectored mode
+        // (bit 0), as in event_asm.S: cores like the CV32E40P need it.
+        asm volatile ("csrw %0, %1" :  : "I" (CSR_MTVEC), "r" (__pi_linker_irq_vector_base() | 1) );
 
 #if defined(__PLATFORM_GVSOC__)
 #if defined(__GVSOC_GUI__)
