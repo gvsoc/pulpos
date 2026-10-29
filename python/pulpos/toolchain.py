@@ -231,9 +231,13 @@ class Toolchain:
 class _LlvmToolchain(Toolchain):
     """
     Parent toolchain class for LLVM toolchains
+
+    linker_relax (bool): Let lld relax the code (e.g. drop the lui + add of
+        thread-local accesses). Off by default.
     """
-    def __init__(self, config: ToolchainConfig):
+    def __init__(self, config: ToolchainConfig, linker_relax: bool=False):
         super().__init__(config, family='llvm')
+        self.linker_relax = linker_relax
 
 
 class _GccToolchain(Toolchain):
@@ -261,8 +265,8 @@ class RiscvLlvmToolchain(_LlvmToolchain):
     ----------
     config (ToolchainConfig): Flags to configure toolchain behavior
     """
-    def __init__(self, config: ToolchainConfig):
-        super().__init__(config)
+    def __init__(self, config: ToolchainConfig, linker_relax: bool=False):
+        super().__init__(config, linker_relax=linker_relax)
 
     def _get_compile_command(self, flags:ToolchainCFlags) -> str:
 

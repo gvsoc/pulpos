@@ -7,7 +7,16 @@
 #pragma once
 
 #include <stdint.h>
+#if __has_include(<unistd.h>)
 #include <unistd.h>
+#else
+#include <stddef.h>
+// No C library (LLVM with its builtins only): ssize_t as newlib defines it,
+// size_t made signed
+#define unsigned signed
+typedef __SIZE_TYPE__ ssize_t;
+#undef unsigned
+#endif
 #include <pmsis/kernel/kernel.h>
 #include <pmsis/drivers/flash.h>
 #include <pmsis/kernel/event.h>

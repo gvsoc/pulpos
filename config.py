@@ -95,7 +95,7 @@ def declare_flags(target, container):
         container.add_ldflags([
             '-lgcc', '-nostartfiles'
         ])
-    else:
+    elif not container._get_toolchain().linker_relax:
         container.add_ldflags([
             '-mno-relax'
         ])
