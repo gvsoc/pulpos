@@ -21,7 +21,7 @@
 
 
 // Block size the heap is carved into. The frees walk the free list, so the run
-// is quadratic in the number of blocks: with 4 KB blocks the el1 L2 shared heap
+// is quadratic in the number of blocks: with 4 KB blocks a ~4 MB L2 shared heap
 // holds 988 of them, which the RTL platform spends minutes simulating. Bigger
 // blocks there give the same checkerboard with ~60 of them; nothing in the test
 // depends on the block size.

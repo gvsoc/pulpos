@@ -27,7 +27,13 @@ ifeq ($(PULPOS_TARGET),)
 $(error No target selected. Pass 'target=<name>' (e.g. make target=gap.gap9.evk) or export PULPOS_TARGET. Generated targets: $(notdir $(wildcard $(PULPOS_RULES_ROOT)/*)))
 endif
 
-PULPOS_TARGET_RULES_DIR := $(PULPOS_RULES_ROOT)/$(PULPOS_TARGET)
+# The target can carry gvrun qualifiers (e.g. <target>:config.<field>=<value>), which
+# a make path cannot hold: its rules are in a directory where ':' and ','
+# become '__' and '=' becomes '_' (rules_dir_name in
+# build_tree/scripts/generate_target_rules.py). gvrun gets the full name.
+_pulpos_comma := ,
+PULPOS_TARGET_DIR_NAME := $(subst =,_,$(subst $(_pulpos_comma),__,$(subst :,__,$(PULPOS_TARGET))))
+PULPOS_TARGET_RULES_DIR := $(PULPOS_RULES_ROOT)/$(PULPOS_TARGET_DIR_NAME)
 ifeq ($(wildcard $(PULPOS_TARGET_RULES_DIR)/bforge_target.mk),)
 $(error No generated PulpOS make rules for target '$(PULPOS_TARGET)' under $(PULPOS_RULES_ROOT). Generated targets: $(notdir $(wildcard $(PULPOS_RULES_ROOT)/*)). Rebuild the SDK with TARGETS=$(PULPOS_TARGET))
 endif

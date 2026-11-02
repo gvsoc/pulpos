@@ -18,8 +18,8 @@
 // Spinlocks protect data shared by the cores running the kernel (see
 // pmsis/kernel/fc_core.h). A core takes a lock with a test-and-set access,
 // through the chip alias of the memory holding the lock, which returns the word
-// and sets it to all ones in one access. The lock must then be in that memory:
-// on el1 the FC TCDM, where the data and BSS sections are, and not in the tiny
+// and sets it to all ones in one access. The lock must then be in that memory,
+// for example the FC TCDM where the data and BSS sections are, and not in the tiny
 // section (PI_MEMORY_TINY), which is reached through another alias. Interrupts must be
 // disabled while holding a lock, so that an interrupt handler of the same core
 // does not try to take it again, which pi_spinlock_lock_irq does.
