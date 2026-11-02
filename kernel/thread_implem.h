@@ -29,8 +29,8 @@ void __pi_thread_slice_check();
 // Deschedule current thread for example, after an exit. This may go to sleep if no thread can be
 // scheduled.
 void __pi_thread_deschedule();
-// Do a context switch
-void __pi_thread_switch();
+// Do a context switch, saving the registers into current and restoring them from next
+void __pi_thread_switch(pi_thread_t *current, pi_thread_t *next);
 // Force a context switch to the next ready thread
 void __pi_thread_switch_to_next();
 // Thread start stub used to unlock interrupts before executing thread entry point

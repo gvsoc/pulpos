@@ -50,7 +50,7 @@ PI_CORE_LOCAL int __pi_thread_vcd_current;
 #endif
 
 // Send the thread name to the profiler
-static int __pi_thread_name_set(pi_thread_t *thread, const char *name)
+static void __pi_thread_name_set(pi_thread_t *thread, const char *name)
 {
 #if defined(__PLATFORM_GVSOC__)
 #if defined(__GVSOC_GUI__)
