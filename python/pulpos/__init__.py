@@ -30,7 +30,7 @@ from pulpos.toolchain import Toolchain, ToolchainCFlags, ToolchainLdFlags
 from gvrun.builder import Builder
 from gvrun.systree import Executable, SystemTreeNode
 from collections import deque
-from gvrun.header_gen import generate_headers
+from config_tree import Config as TreeConfig, write_config_header
 
 # Make sure we look for sources in every directory specified in PULPOS_MODULES
 _modules = os.environ.get('PULPOS_MODULES')
@@ -442,21 +442,21 @@ class SourceContainer(SystemTreeNode):
         self.__subdirs_tree_stack: deque[_ModuleImportNode] = collections.deque()
         self.__subdirs_top = _ModuleImportNode()
         self.__subdirs_tree_stack.append(self.__subdirs_top)
-        self.__config: Config | None = None
+        self.__config: TreeConfig | None = None
 
-    def set_config(self, config: Config):
+    def set_config(self, config: TreeConfig):
         """Set the target configuration for this source container.
 
-        During compilation, the configuration is used to generate C headers (under a ``config/``
-        subdirectory of the build directory) containing target-specific preprocessor definitions.
-        These headers are automatically added to the include path so that all sources in this
-        container can access target characteristics at compile time.
+        During compilation, the fields of the configuration marked ``read=True`` are written
+        as defines to ``target_config.h`` in the build directory, which is put on the include
+        path of this container and of the ones using it. A field is named after its path in
+        the config tree, e.g. ``CONFIG_GAP_SOC_L2_SIZE`` (see ``config_tree.config_header``),
+        as in the make flow.
 
         Parameters
         ----------
         config : Config
-            The target configuration object whose ``generate_headers`` method will be called
-            at build time to emit the headers.
+            The configuration of the target.
         """
         self.__config = config
 
@@ -968,8 +968,7 @@ class SourceContainer(SystemTreeNode):
         self._run_build_steps(builddir)
 
         if self.__config is not None:
-            path = os.path.join(builddir, 'config')
-            generate_headers(self.__config, path)
+            write_config_header(self.__config, os.path.join(builddir, 'target_config.h'))
             self.add_includes(builddir)
 
         for propfile in self.__template_files.values():
@@ -993,6 +992,11 @@ class PulposModule(SourceContainer):
 
     def __init__(self, target: SystemTreeNode, parent: SourceContainer):
         super().__init__('pulpos', target, parent=parent)
+
+        # The readable fields of the config of the target, in target_config.h
+        config = target.get_attributes()
+        if isinstance(config, TreeConfig):
+            self.set_config(config)
 
 
     def _dump_tree(self, tree: rich.tree.Tree, inc_arch: bool, inc_build: bool, inc_target: bool,
