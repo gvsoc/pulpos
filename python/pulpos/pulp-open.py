@@ -58,14 +58,22 @@ class PulpOpenPulposModule(PulposModule):
 
         self.add_define('__RV32__', '1')
 
+        # Hardware loops are off by default: the interrupt handlers do not save
+        # the loop CSRs, so an interrupt landing in a hardware loop of code which
+        # is itself interrupted by another one breaks it. Code which does not run
+        # under interrupts (cluster compute kernels, like the PULP-SDK builds
+        # them) can turn them on.
+        hwloop = BuildParameter(self, 'hwloop', False,
+            'Let the compiler generate RI5CY hardware loops').value
         self.add_cflags([
-            '-march=rv32imcxgap9 -mnohwloop'
+            '-march=rv32imcxgap9' + ('' if hwloop else ' -mnohwloop')
         ])
         self.add_ldflags([
             '-march=rv32imcxgap9'
         ])
 
         self.add_define('CONFIG_ISA_PULPV2', 1)
+        self.add_define('CONFIG_CYCLE_INC', '<arch/pulp/kernel/cycle.h>')
 
         self.add_define('CONFIG_IRQ_INC', '<arch/pulp/kernel/irq.h>')
         self.add_define('CONFIG_MEMORY_INC', '<arch/pulp/kernel/memory.h>')

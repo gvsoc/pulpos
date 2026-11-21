@@ -23,6 +23,21 @@ _STACK_SIZE = 0x800
 # -march on the command line wins, so `test.add_cflags(f'-march={MARCH_VECTOR}')`
 # is the opt-in -- the same mechanism spatz-rtl's components use.
 MARCH_VECTOR = 'rv32imafdv_zfh_xdma'
+# The same on the FP32-only cluster (no D: ELEN 32), where LLVM's 'v' (which
+# implies D) is replaced by the embedded-vector subset with fp32 elements
+MARCH_VECTOR_FP32 = 'rv32imaf_zve32f_zvl512b_xdma'
+
+
+def has_double(target) -> bool:
+    """Whether the cores of the target's Spatz cluster have the D extension
+    (the cluster attribute fp32 removes it)."""
+    cluster = target.get_attributes().chip.soc.clusters[0]
+    return 'd' in str(cluster.isa)[4:]
+
+
+def march_vector(target) -> str:
+    """The march of MARCH_VECTOR for the target's cluster."""
+    return MARCH_VECTOR if has_double(target) else MARCH_VECTOR_FP32
 
 
 class SpatzPulposModule(pulpos.PulposModule):
@@ -110,8 +125,15 @@ class SpatzPulposModule(pulpos.PulposModule):
         # Tests whose C files contain hand-written vector inline asm opt back
         # in by adding -march=<vector> to their own cflags: the last -march on
         # the command line wins. `march` overrides the default outright.
-        default_march = ('rv32imafd_zfh_xdma' if toolchain == 'llvm'
-                         else 'rv32imafd')
+        # The FP32-only cluster (cluster attribute fp32) has no D: single
+        # precision ABI, no FP16 (its config has no xf16 either).
+        double = has_double(target)
+        if double:
+            default_march = ('rv32imafd_zfh_xdma' if toolchain == 'llvm'
+                             else 'rv32imafd')
+        else:
+            default_march = 'rv32imaf_xdma' if toolchain == 'llvm' else 'rv32imaf'
+        mabi = 'ilp32d' if double else 'ilp32f'
         march = BuildParameter(self, 'march', default_march, 'RISCV march used for compiling').value
 
         # -fno-builtin prevents the compiler from turning libc code patterns
@@ -128,7 +150,7 @@ class SpatzPulposModule(pulpos.PulposModule):
         # illegal instruction traps into the bootrom's park loop, so the test
         # hangs with no output at all. Explicit vector code is unaffected;
         # only the compiler's own vectorization is turned off.
-        cflags = [f'-march={march}', '-mabi=ilp32d', '-fno-builtin']
+        cflags = [f'-march={march}', f'-mabi={mabi}', '-fno-builtin']
         if toolchain == 'llvm':
             cflags += [
                 # The compiler must never use FP/vector registers the code did
@@ -150,12 +172,12 @@ class SpatzPulposModule(pulpos.PulposModule):
 
         # The march a test adds to its own cflags when it issues vector
         # instructions from C (see the note above).
-        self.add_define('CONFIG_SPATZ_MARCH_VECTOR', MARCH_VECTOR)
+        self.add_define('CONFIG_SPATZ_MARCH_VECTOR', MARCH_VECTOR if double else MARCH_VECTOR_FP32)
         # -fuse-ld=lld has to be explicit: the clang driver otherwise falls
         # back to the host `ld`, which rejects the riscv emulation mode
         # ("unrecognised emulation mode: elf32lriscv"). Older spatz clang
         # builds defaulted to lld and hid this.
-        link_flags = [f'-march={march}', '-mabi=ilp32d', '-Wl,-z,norelro']
+        link_flags = [f'-march={march}', f'-mabi={mabi}', '-Wl,-z,norelro']
         if toolchain == 'llvm':
             link_flags.append('-fuse-ld=lld')
         self.add_ldflags(link_flags)
