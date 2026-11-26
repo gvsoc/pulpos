@@ -6,32 +6,24 @@
 
 // Flash-API round-trip test: erase a sector, program a known pattern, read it
 // back, compare. Uses only the generic `pmsis/drivers/flash.h` interface; the
-// only flash-specific step is the initial `pi_mram_device_init` binding.
+// device is the default flash of the board (PI_BSP_FLASH).
 
 #include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 #include <pmsis/drivers/flash.h>
-#include <arch/gap/gap9/drivers/mram_implem.h>
+#include <pmsis/bsp/bsp.h>
 
 #define TEST_ADDR   0x00001000    // start at sector 1 (leave sector 0 alone)
 #define TEST_SIZE   256
 
-static pi_mram_t mram;
 static uint8_t   tx_buf[TEST_SIZE];
 static uint8_t   rx_buf[TEST_SIZE];
 
 int main(void)
 {
-    struct pi_mram_conf conf = {
-        .size      = 0x400000,
-        .itf       = 0,
-        .frequency = 25000000,
-    };
-    pi_mram_device_init(&mram, &conf);
-
-    pi_device_t *dev = (pi_device_t *)&mram;
+    pi_device_t *dev = PI_BSP_FLASH;
 
     if (pi_flash_open(dev))
     {

@@ -16,9 +16,9 @@ def declare(target):
     test.set_optimization_level('-Os -g')
     test.add_sources('test.c')
 
-    # Bundle two files into the readfs partition of the on-chip MRAM. The MRAM model preloads
-    # ``build/mram.bin`` (written by gvrun) when the simulator starts.
+    # Bundle two files into the readfs partition of the default flash of the board. Its model preloads
+    # its image (written by gvrun) when the simulator starts.
     files_dir = os.path.join(os.path.dirname(__file__), 'files')
-    flash = target.get_flash('mram')
+    flash = target.get_default_flash()
     flash.set_property('readfs', 'files', os.path.join(files_dir, 'hello.txt'))
     flash.set_property('readfs', 'files', os.path.join(files_dir, 'world.txt'))

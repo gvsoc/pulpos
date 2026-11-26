@@ -4,10 +4,10 @@
 //
 // Authors: Germain Haugou (germain.haugou@gmail.com)
 
-// Smoke test for the read-only FS layer. Mounts the on-chip MRAM as a partitioned flash with a
+// Smoke test for the read-only FS layer. Mounts the default flash of the board as a partitioned flash with a
 // gvrun-generated readfs section containing two files (host paths in files/), opens each one,
 // reads its full content, and verifies it byte-for-byte. The flash image is built and preloaded
-// into the simulated MRAM by gvrun; the test is firmware-only.
+// into the simulated flash by gvrun; the test is firmware-only.
 
 #include <stdio.h>
 #include <stddef.h>
@@ -15,7 +15,7 @@
 #include <string.h>
 
 #include <pmsis/kernel/fs.h>
-#include <pmsis/bsp/bsp.h>      // PI_BSP_VFS (the board's /mram VFS)
+#include <pmsis/bsp/bsp.h>      // PI_BSP_VFS, PI_BSP_FLASH_MOUNT (board flash VFS)
 
 
 static int read_and_check(pi_vfs_t *vfs, const char *path, const char *expected)
@@ -74,14 +74,14 @@ int main(void)
 {
     int errors = 0;
 
-    errors += read_and_check(PI_BSP_VFS, "/mram/readfs/hello.txt",
+    errors += read_and_check(PI_BSP_VFS, PI_BSP_FLASH_MOUNT "/readfs/hello.txt",
                              "Hello, readfs!\n");
-    errors += read_and_check(PI_BSP_VFS, "/mram/readfs/world.txt",
+    errors += read_and_check(PI_BSP_VFS, PI_BSP_FLASH_MOUNT "/readfs/world.txt",
                              "The quick brown fox jumps over the lazy dog.\n");
 
     // Stat for a missing file should fail without crashing.
     struct pi_fs_dirent ent;
-    if (pi_fs_stat(PI_BSP_VFS, "/mram/readfs/missing.txt", &ent) == 0)
+    if (pi_fs_stat(PI_BSP_VFS, PI_BSP_FLASH_MOUNT "/readfs/missing.txt", &ent) == 0)
     {
         printf("fs_smoke FAIL: stat of missing file unexpectedly succeeded\n");
         errors++;

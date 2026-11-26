@@ -15,7 +15,7 @@
 #include <string.h>
 
 #include <pmsis/kernel/fs.h>
-#include <pmsis/bsp/bsp.h>      // PI_BSP_VFS (the board's /mram VFS)
+#include <pmsis/bsp/bsp.h>      // PI_BSP_VFS, PI_BSP_FLASH_MOUNT (board flash VFS)
 
 
 static const char *expected = "readfs remount cycle test payload\n";
@@ -24,7 +24,7 @@ static const char *expected = "readfs remount cycle test payload\n";
 static int read_full_and_check(const char *label)
 {
     pi_fs_file_t file;
-    if (pi_fs_open(PI_BSP_VFS, &file, "/mram/readfs/data.txt", PI_FS_O_READ) != 0)
+    if (pi_fs_open(PI_BSP_VFS, &file, PI_BSP_FLASH_MOUNT "/readfs/data.txt", PI_FS_O_READ) != 0)
     {
         printf("fs_remount FAIL: %s open\n", label);
         return 1;

@@ -6,27 +6,18 @@
 
 // Minimal flash-API smoke test. The flow (open -> get_info -> close) uses
 // only the generic `pmsis/drivers/flash.h` API and should work against any
-// concrete flash driver. Only the initial device binding is flash-specific
-// (here: MRAM).
+// concrete flash driver. The device is the default flash of the board
+// (PI_BSP_FLASH).
 
 #include <stdio.h>
 #include <stddef.h>
 #include <pmsis/drivers/flash.h>
-#include <arch/gap/gap9/drivers/mram_implem.h>
+#include <pmsis/bsp/bsp.h>
 
-static pi_mram_t mram;
 
 int main(void)
 {
-    struct pi_mram_conf conf = {
-        .size      = 0x400000,   // 4 MB
-        .itf       = 0,
-        .frequency = 25000000,
-    };
-
-    pi_mram_device_init(&mram, &conf);
-
-    pi_device_t *dev = (pi_device_t *)&mram;
+    pi_device_t *dev = PI_BSP_FLASH;
 
     if (pi_flash_open(dev))
     {

@@ -14,7 +14,7 @@
 #include <string.h>
 
 #include <pmsis/kernel/fs.h>
-#include <pmsis/bsp/bsp.h>      // PI_BSP_VFS (the board's /mram VFS)
+#include <pmsis/bsp/bsp.h>      // PI_BSP_VFS, PI_BSP_FLASH_MOUNT (board flash VFS)
 
 
 static const char *expected[3] = {
@@ -23,9 +23,9 @@ static const char *expected[3] = {
     "cccccccc\n",
 };
 static const char *paths[3] = {
-    "/mram/readfs/alpha.txt",
-    "/mram/readfs/beta.txt",
-    "/mram/readfs/gamma.txt",
+    PI_BSP_FLASH_MOUNT "/readfs/alpha.txt",
+    PI_BSP_FLASH_MOUNT "/readfs/beta.txt",
+    PI_BSP_FLASH_MOUNT "/readfs/gamma.txt",
 };
 
 

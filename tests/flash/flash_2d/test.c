@@ -22,7 +22,7 @@
 #include <string.h>
 #include <pmsis/kernel/event.h>
 #include <pmsis/drivers/flash.h>
-#include <arch/gap/gap9/drivers/mram_implem.h>
+#include <pmsis/bsp/bsp.h>
 
 extern int memcmp(const void *s1, const void *s2, size_t n);
 
@@ -39,7 +39,6 @@ extern int memcmp(const void *s1, const void *s2, size_t n);
 #define SUB_COLS   4
 #define SUB_SIZE   (SUB_ROWS * SUB_COLS)
 
-static pi_mram_t mram;
 static uint8_t   src_buf[SRC_SIZE];
 static uint8_t   ref_buf[SUB_SIZE];   // expected sub-rect bytes
 static uint8_t   rx_buf[SUB_SIZE];
@@ -88,14 +87,7 @@ static void on_async_done(pi_evt_t *e)
 
 int main(void)
 {
-    struct pi_mram_conf conf = {
-        .size      = 0x400000,
-        .itf       = 0,
-        .frequency = 25000000,
-    };
-    pi_mram_device_init(&mram, &conf);
-
-    pi_device_t *dev = (pi_device_t *)&mram;
+    pi_device_t *dev = PI_BSP_FLASH;
 
     if (pi_flash_open(dev))
     {

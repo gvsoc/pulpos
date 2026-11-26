@@ -27,14 +27,13 @@
 extern int memcmp(const void *s1, const void *s2, size_t n);
 #include <pmsis/kernel/event.h>
 #include <pmsis/drivers/flash.h>
-#include <arch/gap/gap9/drivers/mram_implem.h>
+#include <pmsis/bsp/bsp.h>
 
 #define BASE_ADDR  0x00004000
 #define CHUNK_SIZE 256
 #define NB_CHUNKS  32
 #define TOTAL_SIZE (CHUNK_SIZE * NB_CHUNKS)
 
-static pi_mram_t mram;
 static uint8_t   tx_buf[TOTAL_SIZE];
 static uint8_t   rx_buf[TOTAL_SIZE];
 
@@ -107,14 +106,7 @@ static void stream_run(pi_device_t *dev, bool is_write)
 
 int main(void)
 {
-    struct pi_mram_conf conf = {
-        .size      = 0x400000,
-        .itf       = 0,
-        .frequency = 25000000,
-    };
-    pi_mram_device_init(&mram, &conf);
-
-    pi_device_t *dev = (pi_device_t *)&mram;
+    pi_device_t *dev = PI_BSP_FLASH;
 
     if (pi_flash_open(dev))
     {

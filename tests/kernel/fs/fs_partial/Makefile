@@ -10,8 +10,8 @@ APP_SRCS += test.c
 CONFIG_GAP9_BUILD_PULPOS_SW_KERNEL_SW_ALLOC := 1
 CONFIG_GAP9_BUILD_PULPOS_SW_KERNEL_SW_FS := 1
 
-# Bundle the test files into the readfs partition of the on-chip MRAM
+# Bundle the test files into the readfs partition of the default flash of the target
 # (the gvrun flow declares them in config.py).
-APP_RUN_OPTIONS += --flash-property $(CURDIR)/files/lorem.txt@mram:readfs:files
+APP_RUN_OPTIONS += --flash-property $(CURDIR)/files/lorem.txt@$(HW_DEFAULT_FLASH):readfs:files
 
 include $(PULPOS_HOME)/rules/pulpos.mk

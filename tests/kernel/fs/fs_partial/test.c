@@ -13,7 +13,7 @@
 #include <string.h>
 
 #include <pmsis/kernel/fs.h>
-#include <pmsis/bsp/bsp.h>      // PI_BSP_VFS (the board's /mram VFS)
+#include <pmsis/bsp/bsp.h>      // PI_BSP_VFS, PI_BSP_FLASH_MOUNT (board flash VFS)
 
 
 static const char *expected =
@@ -26,7 +26,7 @@ int main(void)
     int errors = 0;
 
     pi_fs_file_t file;
-    if (pi_fs_open(PI_BSP_VFS, &file, "/mram/readfs/lorem.txt", PI_FS_O_READ) != 0)
+    if (pi_fs_open(PI_BSP_VFS, &file, PI_BSP_FLASH_MOUNT "/readfs/lorem.txt", PI_FS_O_READ) != 0)
     {
         printf("fs_partial FAIL: open\n");
         return -1;

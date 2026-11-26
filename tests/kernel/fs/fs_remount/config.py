@@ -16,5 +16,5 @@ def declare(target):
     test.add_sources('test.c')
 
     files_dir = os.path.join(os.path.dirname(__file__), 'files')
-    flash = target.get_flash('mram')
+    flash = target.get_default_flash()
     flash.set_property('readfs', 'files', os.path.join(files_dir, 'data.txt'))
