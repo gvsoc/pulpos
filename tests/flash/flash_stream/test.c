@@ -31,7 +31,12 @@ extern int memcmp(const void *s1, const void *s2, size_t n);
 
 #define BASE_ADDR  0x00004000
 #define CHUNK_SIZE 256
+// The short variant (RTL) streams 1 KB, a single sector to erase
+#ifdef TEST_SHORT
+#define NB_CHUNKS  4
+#else
 #define NB_CHUNKS  32
+#endif
 #define TOTAL_SIZE (CHUNK_SIZE * NB_CHUNKS)
 
 static uint8_t   tx_buf[TOTAL_SIZE];

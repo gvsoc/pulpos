@@ -7,6 +7,7 @@
 # Authors: Germain Haugou (germain.haugou@gmail.com)
 
 import pulpos
+from gvrun.parameter import BuildParameter
 
 def declare(target):
 
@@ -14,3 +15,6 @@ def declare(target):
 
     test.set_optimization_level('-Os -g')
     test.add_sources('test.c')
+    # Short variant, for slow platforms (RTL): 1 KB stream instead of 8 KB
+    if BuildParameter(test, 'short', False, 'Short variant of the test, for RTL').value:
+        test.add_define('TEST_SHORT', '1')
